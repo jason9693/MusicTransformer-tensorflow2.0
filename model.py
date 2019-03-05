@@ -88,6 +88,7 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         :param input_shape: [3, batch, L, D]
         :return:
         '''
+        self.batch_size = input_shape[0][0]
         self.Wq = self.add_variable("Wq", shape=[int(input_shape[0][-1]), int(input_shape[0][-1])])
         self.Wk = self.add_variable("Wk", shape=[int(input_shape[1][-1]), int(input_shape[1][-1])])
         self.Wv = self.add_variable("Wv", shape=[int(input_shape[2][-1]), int(input_shape[2][-1])])
@@ -121,8 +122,11 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         return attention
 
     def _skewing(self, tensor: tf.Tensor):
-        print(tensor.shape)
-        pad = tf.constant(shape=tensor.shape[:2], value=0.0)
+        if tensor.shape[0] is None:
+            pad_shape = [self.batch_size] + tensor.shape[1:2]
+        else:
+            pad_shape = tensor.shape[:2]
+        pad = tf.constant(shape=pad_shape, value=0.0)
         pad = tf.expand_dims(pad,2)
         cat = tf.concat([pad, tensor], 2)
 
