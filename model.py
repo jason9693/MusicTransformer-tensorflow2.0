@@ -62,17 +62,19 @@ class MusicTransformer(tf.keras.Model):
         dec_layers = self.decoder_list[layer]
         decoder1 = dec_layers[0]([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
         add_and_norm = dec_layers[1]([decoder1, input_tensor])
-        add_and_norm = dec_layers[6](add_and_norm)
+        #add_and_norm = dec_layers[6](add_and_norm)
 
         decoder2 = dec_layers[2]([add_and_norm, add_and_norm, add_and_norm])
         residual = dec_layers[3]([decoder2, add_and_norm])
-        residual = dec_layers[7](residual)
+        #residual = dec_layers[7](residual)
 
         FFN = dec_layers[4](residual)
         FFN = dec_layers[5](FFN)
         return FFN
 
     def processed_y(self, y: np.array):
+        print(y)
+        print(np.eye(self.vocab_size)[y])
         return np.eye(self.vocab_size)[y]
 
 
