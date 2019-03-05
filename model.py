@@ -112,7 +112,7 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         K = tf.tensordot(inputK, self.Wk, [[2],[0]])
         V = tf.tensordot(inputV, self.Wv, [[2],[0]])
 
-        E = Q - K
+        E = K - Q
         E = tf.transpose(E,[0,2,1])
 
         QE = tf.matmul(Q,E)
