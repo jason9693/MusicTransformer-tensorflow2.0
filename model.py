@@ -6,8 +6,8 @@ tf.enable_eager_execution()
 
 
 class MusicTransformer(tf.keras.Model):
-    def __init__(self, embedding_dim :int = 256, vocab_size :int=240, num_layer :int =6,
-                 max_seq :int = 2048, debug :bool = False):
+    def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
+                 max_seq = 2048, debug = False):
         super(MusicTransformer, self).__init__()
         self._debug = debug
         self.num_layer = num_layer
