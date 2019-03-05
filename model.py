@@ -127,6 +127,7 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
             pad_shape = [tf.Dimension(self.batch_size)] + tensor.shape[1:2]
         else:
             pad_shape = tensor.shape[:2]
+        print(pad_shape)
         pad = tf.constant(shape=pad_shape, value=0.0)
         pad = tf.expand_dims(pad,2)
         cat = tf.concat([pad, tensor], 2)
