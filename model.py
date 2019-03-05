@@ -89,6 +89,8 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         :return:
         '''
         self.batch_size = input_shape[0][0]
+        print(input_shape)
+        print(self.batch_size)
         self.Wq = self.add_variable("Wq", shape=[int(input_shape[0][-1]), int(input_shape[0][-1])])
         self.Wk = self.add_variable("Wk", shape=[int(input_shape[1][-1]), int(input_shape[1][-1])])
         self.Wv = self.add_variable("Wv", shape=[int(input_shape[2][-1]), int(input_shape[2][-1])])
