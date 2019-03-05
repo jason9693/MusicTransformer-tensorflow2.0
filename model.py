@@ -42,6 +42,7 @@ class MusicTransformer(tf.keras.Model):
             )
             for _ in range(self.num_layer)
         ]
+        self.flatten = tf.keras.layers.Flatten()
 
     def call(self, inputs, training=None, mask=None):
         embedding = tf.add(self.embed(inputs) , tf.expand_dims(self.positional_embedding, 0))
@@ -54,7 +55,7 @@ class MusicTransformer(tf.keras.Model):
                 layer=i
             )
             decoder_input = decoder
-        return self.fc_layer(tf.keras.layers.Flatten()(decoder_input))
+        return self.fc_layer(self.flatten(decoder_input))
 
     def _decoder(self, input_tensor, activation=None, layer=0):
         if self._debug:
@@ -84,18 +85,14 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
     from Music Transformer ( Huang et al, 2018 )
     [paper link](https://arxiv.org/pdf/1809.04281.pdf)
     '''
-    def __init__(self ,Dh , **kwargs):
+    def __init__(self ,Dh , D=256, **kwargs):
         super().__init__(**kwargs)
         self.Dh = float(Dh)
+        self.D = D
+        self.Wq = self.add_variable("Wq", shape=[int(self.D), int(self.D)])
+        self.Wk = self.add_variable("Wk", shape=[int(self.D), int(self.D)])
+        self.Wv = self.add_variable("Wv", shape=[int(self.D), int(self.D)])
 
-    def build(self, input_shape):
-        '''
-        :param input_shape: [3, batch, L, D]
-        :return:
-        '''
-        self.Wq = self.add_variable("Wq", shape=[int(input_shape[0][-1]), int(input_shape[0][-1])])
-        self.Wk = self.add_variable("Wk", shape=[int(input_shape[1][-1]), int(input_shape[1][-1])])
-        self.Wv = self.add_variable("Wv", shape=[int(input_shape[2][-1]), int(input_shape[2][-1])])
 
     def call(self, inputs, **kwargs):
         '''
