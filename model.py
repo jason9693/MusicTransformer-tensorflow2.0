@@ -35,7 +35,9 @@ class MusicTransformer(tf.keras.Model):
                 RelativeGlobalAttention(64),
                 tf.keras.layers.Add(),
                 tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu),
-                tf.keras.layers.Dense(self.embedding_dim)
+                tf.keras.layers.Dense(self.embedding_dim),
+                tf.keras.layers.BatchNormalization(),
+                tf.keras.layers.BatchNormalization()
             )
             for _ in range(self.num_layer)
         ]
@@ -59,11 +61,11 @@ class MusicTransformer(tf.keras.Model):
         dec_layers = self.decoder_list[layer]
         decoder1 = dec_layers[0]([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
         add_and_norm = dec_layers[1]([decoder1, input_tensor])
-        add_and_norm = tf.keras.layers.BatchNormalization()(add_and_norm)
+        add_and_norm = dec_layers[6](add_and_norm)
 
         decoder2 = dec_layers[2]([add_and_norm, add_and_norm, add_and_norm])
         residual = dec_layers[3]([decoder2, add_and_norm])
-        residual = tf.keras.layers.BatchNormalization()(residual)
+        residual = dec_layers[7](residual)
 
         FFN = dec_layers[4](residual)
         FFN = dec_layers[5](FFN)
