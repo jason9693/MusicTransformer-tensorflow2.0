@@ -73,8 +73,8 @@ class MusicTransformer(tf.keras.Model):
         return FFN
 
     def processed_y(self, y: np.array):
-        print(y)
-        print(np.eye(self.vocab_size)[y])
+        # print(y)
+        # print(np.eye(self.vocab_size)[y])
         return np.eye(self.vocab_size)[y]
 
 
