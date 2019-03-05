@@ -127,9 +127,9 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         pad = tf.expand_dims(pad,2)
         cat = tf.concat([pad, tensor], 2)
 
-        reshaped = tf.reshape(cat, shape=[cat.shape[0], cat.shape[2], cat.shape[1]])
+        reshaped = tf.reshape(cat, shape=tf.TensorShape([cat.shape[0], cat.shape[2], cat.shape[1]]))
 
-        Srel = tf.slice(reshaped, [0,1,0], [reshaped.shape[0], reshaped.shape[2], reshaped.shape[2]])
+        Srel = tf.slice(reshaped, [0,1,0], tf.TensorShape([reshaped.shape[0], reshaped.shape[2], reshaped.shape[2]]))
 
         return Srel
 
