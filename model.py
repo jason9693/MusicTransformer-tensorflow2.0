@@ -20,12 +20,13 @@ class MusicTransformer(tf.keras.Model):
                 m.sin(
                     m.pow(
                         (pos * 0.00001), i / self.embedding_dim
-                    ) / -m.pi * 0.5 * ((i + 1) % 2)
+                    ) - m.pi * 0.5 * ((i + 1) % 2)
                 )
                 for i in range(self.embedding_dim)
             ]
             for pos in range(max_seq)
         ]
+        print(embed_sinusoid_list)
         embed_sinusoid_list = np.array(embed_sinusoid_list)
         self.positional_embedding = tf.constant(embed_sinusoid_list, dtype=tf.float32)
         self.decoder_list = [
