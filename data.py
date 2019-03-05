@@ -22,7 +22,6 @@ class Data:
     def _get_seq(self, fname, max_length=None):
         with open(fname, 'rb') as f:
             data = pickle.load(f)
-        print(max(data))
         if max_length is not None:
             if max_length <= len(data):
                 start = random.randrange(0,len(data) - max_length)
