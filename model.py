@@ -122,8 +122,8 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         return attention
 
     def _skewing(self, tensor: tf.Tensor):
-        print(type(tensor.shape[0]))
-        if tensor.shape[0] is None:
+        print(tensor.shape.dims)
+        if tensor.shape[0] is tf.Dimension(None):
             pad_shape = [self.batch_size] + tensor.shape[1:2]
         else:
             pad_shape = tensor.shape[:2]
