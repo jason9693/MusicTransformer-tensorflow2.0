@@ -35,7 +35,7 @@ class MusicTransformer(tf.keras.Model):
                 tf.keras.layers.Add(),
                 RelativeGlobalAttention(64),
                 tf.keras.layers.Add(),
-                tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu),
+                tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.leaky_relu),
                 tf.keras.layers.Dense(self.embedding_dim),
                 tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.BatchNormalization()
