@@ -41,7 +41,7 @@ class MusicTransformerV2:
 
         decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
         residual = tf.keras.layers.Add()([decoder2, add_and_norm])
-        #residual = dec_layers[7](residual)
+        residual = tf.keras.layers.BatchNormalization()(residual)
 
         FFN = tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.leaky_relu)(residual)
         FFN = tf.keras.layers.Dense(self.embedding_dim)(FFN)
