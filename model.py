@@ -74,6 +74,9 @@ class MusicTransformerV2:
         else:
             return self.model.train_on_batch(x,y)
 
+    def processed_y(self, y: np.array):
+        return np.eye(self.vocab_size)[y]
+
 
 
 
