@@ -48,7 +48,7 @@ class MusicTransformerV2:
         return FFN
 
     def _build_model(self):
-        x = tf.keras.Input([self.vocab_size])
+        x = tf.keras.Input([self.max_seq])
         embed = tf.keras.layers.Embedding(self.vocab_size, self.embedding_dim, input_length=self.max_seq)(x)
         embed = PositionEmbedding(self.max_seq, self.embedding_dim)(embed)
 
