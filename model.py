@@ -37,7 +37,7 @@ class MusicTransformerV2:
             print('[DEBUG]:{}'.format('decoder called'))
         decoder1 = RelativeGlobalAttention(64)([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
         add_and_norm = tf.keras.layers.Add()([decoder1, input_tensor])
-        #add_and_norm = dec_layers[6](add_and_norm)
+        add_and_norm = tf.keras.layers.BatchNormalization()(add_and_norm)
 
         decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
         residual = tf.keras.layers.Add()([decoder2, add_and_norm])
