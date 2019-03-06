@@ -83,3 +83,13 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         Srel = tf.slice(reshaped, [0,1,0], [-1, reshaped.shape[2], reshaped.shape[2]])
 
         return Srel
+
+
+class View1D(tf.keras.layers.Layer):
+    def __init__(self, axis=-1, **kwargs):
+        super().__init__(**kwargs)
+        self.axis = axis
+
+
+    def call(self, inputs, **kwargs):
+        return inputs[:,self.axis]
