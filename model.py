@@ -62,8 +62,9 @@ class MusicTransformerV2:
             )
             decoder_input = decoder
 
-        flatten = tf.keras.layers.Flatten()(decoder_input)
-        fc = tf.keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(flatten)
+        #flatten = tf.keras.layers.Flatten()(decoder_input)
+        crop = View1D(-1)(decoder_input)
+        fc = tf.keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(crop)
 
         model = tf.keras.Model(x, fc)
         return model
