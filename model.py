@@ -1,20 +1,19 @@
 import tensorflow as tf
 import math as m
 import tensorflow.contrib.eager as tfe
+from custom_layers import *
 import numpy as np
 tf.enable_eager_execution()
 
-
-class MusicTransformer(tf.keras.Model):
+class MusicTransformerV2:
     def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
-                 max_seq = 2048, debug = False):
-        super(MusicTransformer, self).__init__()
+                 max_seq = 2048,l_r = 0.001, debug = False):
         self._debug = debug
         self.num_layer = num_layer
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
-        self.embed = tf.keras.layers.Embedding(self.vocab_size, self.embedding_dim, input_length=max_seq)
-        self.fc_layer = tf.keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)
+        self.max_seq = max_seq
+
         embed_sinusoid_list = [
             [
                 m.sin(
@@ -26,21 +25,93 @@ class MusicTransformer(tf.keras.Model):
             ]
             for pos in range(max_seq)
         ]
-        print(embed_sinusoid_list)
+        self.embed_sinusoid_list = tf.keras.backend.constant(embed_sinusoid_list)
+        self.model = self._build_model()
+
+        optim = tf.train.AdamOptimizer(l_r)
+        self.model.compile(optim, loss='categorical_crossentropy')
+        pass
+
+    def _decoder(self, input_tensor, activation=None, layer=0):
+        if self._debug:
+            print('[DEBUG]:{}'.format('decoder called'))
+        decoder1 = RelativeGlobalAttention(64)([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
+        add_and_norm = tf.keras.layers.Add()([decoder1, input_tensor])
+        #add_and_norm = dec_layers[6](add_and_norm)
+
+        decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
+        residual = tf.keras.layers.Add()([decoder2, add_and_norm])
+        #residual = dec_layers[7](residual)
+
+        FFN = tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.leaky_relu)(residual)
+        FFN = tf.keras.layers.Dense(self.embedding_dim)(FFN)
+        return FFN
+
+    def _build_model(self):
+        x = tf.keras.Input([self.vocab_size])
+        embed = tf.keras.layers.Embedding(self.vocab_size, self.embedding_dim, input_length=self.max_seq)(x)
+        embed = PositionEmbedding(self.max_seq, self.embedding_dim)(embed)
+
+        decoder_input = embed
+
+        for i in range(self.num_layer):
+            decoder = self._decoder(
+                decoder_input,
+                tf.nn.relu,
+                layer=i
+            )
+            decoder_input = decoder
+
+        flatten = tf.keras.layers.Flatten()(decoder_input)
+        fc = tf.keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(flatten)
+
+        model = tf.keras.Model(x, fc)
+        return model
+
+    def train(self, x, y, mode_params = {'batch':10, 'epoch':100}):
+        if mode_params is not None:
+            return self.model.fit(x, y, batch_size=mode_params['batch'], epochs=mode_params['epoch'])
+        else:
+            return self.model.train_on_batch(x,y)
+
+
+
+
+class MusicTransformer(tf.keras.Model):
+    def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
+                 max_seq = 2048, debug = False):
+        super(MusicTransformer, self).__init__()
+        self._debug = debug
+        self.num_layer = num_layer
+        self.embedding_dim = embedding_dim
+        self.vocab_size = vocab_size
+        embed_sinusoid_list = [
+            [
+                m.sin(
+                    m.pow(
+                        (pos * 0.00001), i / self.embedding_dim
+                    ) - m.pi * 0.5 * ((i + 1) % 2)
+                )
+                for i in range(self.embedding_dim)
+            ]
+            for pos in range(max_seq)
+        ]
         embed_sinusoid_list = np.array(embed_sinusoid_list)
         self.positional_embedding = tf.constant(embed_sinusoid_list, dtype=tf.float32)
+        self.embed = tf.keras.layers.Embedding(self.vocab_size, self.embedding_dim, input_length=max_seq)
+        self.fc_layer = tf.keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)
         self.decoder_list = [
             (
-                RelativeGlobalAttention(64),
+                RelativeGlobalAttention(64, name='rga_{}_1'.format(i)),
                 tf.keras.layers.Add(),
-                RelativeGlobalAttention(64),
+                RelativeGlobalAttention(64, name='rga_{}_2'.format(i)),
                 tf.keras.layers.Add(),
                 tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.leaky_relu),
                 tf.keras.layers.Dense(self.embedding_dim),
                 tf.keras.layers.BatchNormalization(),
                 tf.keras.layers.BatchNormalization()
             )
-            for _ in range(self.num_layer)
+            for i in range(self.num_layer)
         ]
         self.flatten = tf.keras.layers.Flatten()
 
@@ -74,66 +145,26 @@ class MusicTransformer(tf.keras.Model):
         return FFN
 
     def processed_y(self, y: np.array):
-        # print(y)
-        # print(np.eye(self.vocab_size)[y])
         return np.eye(self.vocab_size)[y]
 
+# class DecoderBlock(tf.keras.layers.Wrapper):
+#     def __init__(self, layer, **kwargs):
+#         super().__init__(layer, **kwargs)
+#         self.rga1 = RelativeGlobalAttention(64, name=self.name+'_1'),
+#         self.add1 = tf.keras.layers.Add(),
+#         self.rga2 = RelativeGlobalAttention(64, name=self.name+'_2'),
+#         self.add2 = tf.keras.layers.Add(),
+#         self.dense1 = tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.leaky_relu),
+#         self.dense2 = tf.keras.layers.Dense(self.embedding_dim),
+#         self.bn1 = tf.keras.layers.BatchNormalization(),
+#         self.bn2 = tf.keras.layers.BatchNormalization()
+#         pass
 
 
-class RelativeGlobalAttention(tf.keras.layers.Layer):
-    ''''
-    from Music Transformer ( Huang et al, 2018 )
-    [paper link](https://arxiv.org/pdf/1809.04281.pdf)
-    '''
-    def __init__(self ,Dh , D=256, **kwargs):
-        super().__init__(**kwargs)
-        self.Dh = float(Dh)
-        self.D = D
-        self.Wq = self.add_variable("Wq", shape=[int(self.D), int(self.D)])
-        self.Wk = self.add_variable("Wk", shape=[int(self.D), int(self.D)])
-        self.Wv = self.add_variable("Wv", shape=[int(self.D), int(self.D)])
 
 
-    def call(self, inputs, **kwargs):
-        '''
-        :param inputs: a list of tensors. i.e) [Q, K, V]
-        :param kwargs:
-        :return: final tensor ( output of attention )
-        '''
 
-        inputQ = inputs[0]
-        inputK = inputs[1]
-        inputV = inputs[2]
 
-        Q = tf.tensordot(inputQ, self.Wq, [[2],[0]])
-        K = tf.tensordot(inputK, self.Wk, [[2],[0]])
-        V = tf.tensordot(inputV, self.Wv, [[2],[0]])
-
-        E = K - Q
-        E = tf.transpose(E,[0,2,1])
-
-        QE = tf.matmul(Q,E)
-        Srel = self._skewing(QE)
-        Kt = tf.transpose(K,[0,2,1])
-        QKt = tf.matmul(Q,Kt)
-
-        attention = tf.nn.softmax((QKt + Srel) / tf.sqrt(self.Dh))
-        attention = tf.matmul(attention, V)
-
-        return attention
-
-    def _skewing(self, tensor: tf.Tensor):
-
-        pad = tf.zeros_like(tensor)
-        pad = pad[:,:,0]
-        pad = tf.expand_dims(pad,2)
-        cat = tf.concat([pad, tensor], 2)
-
-        reshaped = tf.reshape(cat, shape=[-1, cat.shape[2], cat.shape[1]])
-
-        Srel = tf.slice(reshaped, [0,1,0], [-1, reshaped.shape[2], reshaped.shape[2]])
-
-        return Srel
 
 
 if __name__ == '__main__':
