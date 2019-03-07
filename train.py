@@ -1,16 +1,17 @@
-from model import MusicTransformerV2
+from model import MusicTransformerV2, MusicTransformer
 import tensorflow as tf
 import numpy as np
 import params as par
 import sequence
 import utils
 import time
-tf.enable_eager_execution()
+from tensorflow.python import keras
+tf.executing_eagerly()
 
 if __name__ == '__main__':
     # print(tf.TensorShape(None).dims)
     # model = MusicTransformer()
-    # optimizer = tf.train.AdamOptimizer(par.l_r)
+    # optimizer = keras.optimizers.Adam(lr=par.l_r)
     # model.compile(optimizer=optimizer, loss=par.loss_type)
     #
     # x= np.zeros(shape=[par.batch_size, par.max_seq])

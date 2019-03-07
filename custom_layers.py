@@ -1,7 +1,9 @@
 import tensorflow as tf
 import math as m
+from tensorflow.python import keras
+import numpy as np
 
-class ExpandDims(tf.keras.layers.Layer):
+class ExpandDims(keras.layers.Layer):
     def __init__(self, axis=-1, **kwargs):
         super().__init__(**kwargs)
         self.axis = axis
@@ -9,27 +11,27 @@ class ExpandDims(tf.keras.layers.Layer):
     def call(self, inputs, **kwargs):
         return tf.expand_dims(inputs, axis=self.axis)
 
-class PositionEmbedding(tf.keras.layers.Layer):
+class PositionEmbedding(keras.layers.Layer):
     def __init__(self, max_seq, embedding_dim, **kwargs):
         super().__init__(**kwargs)
-        embed_sinusoid_list = [[
+        embed_sinusoid_list = np.array( [[
             [
                 m.sin(
-                    m.pow(
-                        (pos * 0.00001), i / embedding_dim
-                    ) - m.pi * 0.5 * ((i + 1) % 2)
+                    pos * m.exp(-m.log(10000)*i/embedding_dim) * m.exp(m.log(10000)/embedding_dim * (i%2)) + 0.5*m.pi*(i%2)
                 )
                 for i in range(embedding_dim)
             ]
             for pos in range(max_seq)
-        ]]
+        ]] )
         self.positional_embedding = tf.constant(embed_sinusoid_list, dtype=tf.float32)
 
+    def _boolean_calculate(self, i):
+        return int(i%2)
 
     def call(self, inputs, **kwargs):
         return tf.add(inputs,self.positional_embedding)
 
-class RelativeGlobalAttention(tf.keras.layers.Layer):
+class RelativeGlobalAttention(keras.layers.Layer):
     ''''
     from Music Transformer ( Huang et al, 2018 )
     [paper link](https://arxiv.org/pdf/1809.04281.pdf)
@@ -85,7 +87,7 @@ class RelativeGlobalAttention(tf.keras.layers.Layer):
         return Srel
 
 
-class View1D(tf.keras.layers.Layer):
+class View1D(keras.layers.Layer):
     def __init__(self, axis=-1, **kwargs):
         super().__init__(**kwargs)
         self.axis = axis
