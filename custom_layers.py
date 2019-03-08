@@ -98,11 +98,18 @@ class View1D(keras.layers.Layer):
         return inputs[:,self.axis]
 
 class SeqLoss(keras.losses.CategoricalCrossentropy):
-    def __init__(self, len_word):
+    def __init__(self, vocab_size):
         super(SeqLoss, self).__init__()
-        self.len_word = len_word
+        self.len_word = vocab_size
         pass
 
     def call(self, y_true, y_pred):
-        index = len(y_true[0])
-        pass
+        y_true = self.processed_y(y_true)
+        return super().call(y_true, y_pred)
+
+    def processed_y(self, y: np.array):
+        return np.eye(self.len_word)[y]
+
+if __name__ == '__main__':
+    loss = SeqLoss(240)
+    print(loss.processed_y(np.zeros([10,2048], dtype=np.int)).shape)
