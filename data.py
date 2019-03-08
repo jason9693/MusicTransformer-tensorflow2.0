@@ -102,8 +102,11 @@ class DataSequence(keras.utils.Sequence):
     def __getitem__(self, idx):
         data_batch = self.data.batch(self.batch_size,self.seq_len + 1)
         data_batch = np.array(data_batch)
-        x = data_batch[:,:-1]
-        y = data_batch[:,1:]
+        try:
+            x = data_batch[:,:-1]
+            y = data_batch[:,1:]
+        except:
+            return self.__getitem__(idx)
 
         return np.array(x), np.eye(self.vocab_size)[np.array(y)]
 
