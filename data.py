@@ -78,11 +78,12 @@ class PositionalY:
         return '<Label located in {} position.>'.format(self.idx)
 
 class DataSequence(keras.utils.Sequence):
-    def __init__(self, path, batch_size, seq_len):
+    def __init__(self, path, batch_size, seq_len, vocab_size = 240):
         self.data = Data(path)
         self.batch_size = batch_size
         self.file_idx = 0
         self.cache = []
+        self.vocab_size = vocab_size
         self.seq_len = seq_len
         pass
 
@@ -95,15 +96,6 @@ class DataSequence(keras.utils.Sequence):
         seq = self.data._get_seq(self.data.files[self.file_idx])
         self.cache = self._cut_data(seq)
 
-    # def _cut_data(self, seq):
-    #     data = []
-    #     size = self.seq_len + 1
-    #     for i in range(len(seq)):
-    #         data.append([fill_with_placeholder(seq[i : i+size - 1],self.seq_len), PositionalY(seq[i+size], i+size)])
-    #
-    #     return data
-
-
     def __len__(self):
         return len(self.data.files)
 
@@ -113,7 +105,8 @@ class DataSequence(keras.utils.Sequence):
         x = data_batch[:,:-1]
         y = data_batch[:,1:]
 
-        return np.array(x), np.array(y)
+        return np.array(x), np.eye(self.vocab_size)[np.array(y)]
+
 
 def fill_with_placeholder(prev_data: list, max_len: int, max_val: float=239):
     placeholder = [max_val for _ in range(max_len - len(prev_data))]
@@ -122,7 +115,6 @@ def fill_with_placeholder(prev_data: list, max_len: int, max_val: float=239):
 if __name__ == '__main__':
     data = Data('dataset/processed')
     ds = DataSequence('dataset/processed', 10, 2048)
-    print(ds.__getitem__(3)[1].shape)
     #print(data.batch(100, 2048))
     #while True:
     print(data.sequential_batch(10, 2048))
