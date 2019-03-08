@@ -31,6 +31,7 @@ class PositionEmbedding(keras.layers.Layer):
     def call(self, inputs, **kwargs):
         return tf.add(inputs,self.positional_embedding)
 
+
 class RelativeGlobalAttention(keras.layers.Layer):
     ''''
     from Music Transformer ( Huang et al, 2018 )
@@ -95,3 +96,13 @@ class View1D(keras.layers.Layer):
 
     def call(self, inputs, **kwargs):
         return inputs[:,self.axis]
+
+class SeqLoss(keras.losses.CategoricalCrossentropy):
+    def __init__(self, len_word):
+        super(SeqLoss, self).__init__()
+        self.len_word = len_word
+        pass
+
+    def call(self, y_true, y_pred):
+        index = len(y_true[0])
+        pass

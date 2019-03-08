@@ -13,18 +13,6 @@ class MusicTransformerV2:
         self.vocab_size = vocab_size
         self.max_seq = max_seq
 
-        # embed_sinusoid_list = [
-        #     [
-        #         m.sin(
-        #             m.pow(
-        #                 (pos * 0.00001), i / self.embedding_dim
-        #             ) - m.pi * 0.5 * ((i + 1) % 2)
-        #         )
-        #         for i in range(self.embedding_dim)
-        #     ]
-        #     for pos in range(max_seq)
-        # ]
-        # self.embed_sinusoid_list = keras.backend.constant(embed_sinusoid_list)
         self.model = self._build_model()
 
         optim = keras.optimizers.Adam(l_r)
@@ -62,9 +50,9 @@ class MusicTransformerV2:
             decoder_input = decoder
 
         #flatten = keras.layers.Flatten()(decoder_input)
-        crop = View1D(-1)(decoder_input)
-        fc = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(crop)
-
+        print(decoder_input.shape)
+        #crop = View1D(-1)(decoder_input)
+        fc = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(decoder_input)
         model = keras.Model(x, fc)
         return model
 
