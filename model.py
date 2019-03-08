@@ -6,13 +6,13 @@ from tensorflow.python import keras
 tf.executing_eagerly()
 class MusicTransformerV2:
     def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
-                 max_seq = 2048,l_r = 0.001, debug = False):
+                 max_seq = 2048,l_r = 0.001, debug = False, dropout = 0.1):
         self._debug = debug
         self.num_layer = num_layer
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
         self.max_seq = max_seq
-
+        self.dropout = dropout
         self.model = self._build_model()
 
         optim = keras.optimizers.Adam(l_r)
@@ -23,14 +23,18 @@ class MusicTransformerV2:
         if self._debug:
             print('[DEBUG]:{}'.format('decoder called'))
         decoder1 = RelativeGlobalAttention(64)([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
+        decoder1 = keras.layers.Dropout(rate=self.dropout)(decoder1)
         add_and_norm = keras.layers.Add()([decoder1, input_tensor])
-        # add_and_norm = keras.layers.BatchNormalization()(add_and_norm)
+        add_and_norm = keras.layers.normalization.LayerNormalization()(add_and_norm)
 
         decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
+        decoder2 = keras.layers.Dropout(rate=self.dropout)(decoder2)
+
         residual = keras.layers.Add()([decoder2, add_and_norm])
-        # residual = keras.layers.BatchNormalization()(residual)
+        residual = keras.layers.normalization.LayerNormalization()(residual)
 
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
+        FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
         FFN = keras.layers.Dense(self.embedding_dim)(FFN)
         return FFN
 
@@ -50,7 +54,6 @@ class MusicTransformerV2:
             decoder_input = decoder
 
         #flatten = keras.layers.Flatten()(decoder_input)
-        print(decoder_input.shape)
         #crop = View1D(-1)(decoder_input)
         fc = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(decoder_input)
         model = keras.Model(x, fc)
