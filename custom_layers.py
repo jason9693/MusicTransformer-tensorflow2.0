@@ -104,12 +104,16 @@ class SeqLoss(keras.losses.CategoricalCrossentropy):
         pass
 
     def call(self, y_true, y_pred):
-        y_true = self.processed_y(np.array(y_true, dtype=np.int))
+        y_true = np.array(y_true, dtype=np.int)
+        y_true = self.processed_y(y_true)
         return super().call(y_true, y_pred)
 
     def processed_y(self, y: np.array):
         return np.eye(self.len_word)[y]
 
 if __name__ == '__main__':
-    loss = SeqLoss(240)
-    print(loss.processed_y(np.zeros([10,2048], dtype=np.int)).shape)
+    pass
+    # loss = SeqLoss(240)
+    # print(loss.processed_y(np.zeros([10,2048], dtype=np.int)).shape)
+    # mock = np.ones([10, 2048], dtype=np.int)
+    # print(loss(mock, mock))
