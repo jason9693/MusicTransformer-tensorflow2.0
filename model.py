@@ -25,13 +25,13 @@ class MusicTransformerV2:
         decoder1 = RelativeGlobalAttention(64)([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
         decoder1 = keras.layers.Dropout(rate=self.dropout)(decoder1)
         add_and_norm = keras.layers.Add()([decoder1, input_tensor])
-        add_and_norm = keras.layers.normalization.LayerNormalization()(add_and_norm)
+        add_and_norm = keras.layers.LayerNormalization()(add_and_norm)
 
         decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
         decoder2 = keras.layers.Dropout(rate=self.dropout)(decoder2)
 
         residual = keras.layers.Add()([decoder2, add_and_norm])
-        residual = keras.layers.normalization.LayerNormalization()(residual)
+        residual = keras.layers.LayerNormalization()(residual)
 
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
