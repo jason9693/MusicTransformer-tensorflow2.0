@@ -1,9 +1,8 @@
-import tensorflow as tf
-import math as m
-from custom_layers import *
+from custom.layers import *
 import numpy as np
 from tensorflow.python import keras
 tf.executing_eagerly()
+
 class MusicTransformerV2:
     def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
                  max_seq = 2048,l_r = 0.001, debug = False, dropout = 0.1):
@@ -36,6 +35,7 @@ class MusicTransformerV2:
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
         FFN = keras.layers.Dense(self.embedding_dim)(FFN)
+        FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
         return FFN
 
     def _build_model(self):
@@ -53,8 +53,6 @@ class MusicTransformerV2:
             )
             decoder_input = decoder
 
-        #flatten = keras.layers.Flatten()(decoder_input)
-        #crop = View1D(-1)(decoder_input)
         fc = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(decoder_input)
         model = keras.Model(x, fc)
         return model

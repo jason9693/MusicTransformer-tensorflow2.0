@@ -2,10 +2,9 @@ import numpy as np
 import copy, itertools, collections
 from pretty_midi import PrettyMIDI, Note, Instrument
 
-
-#==================================================================================
+# ==================================================================================
 # Parameters
-#==================================================================================
+# ==================================================================================
 
 # NoteSeq -------------------------------------------------------------------------
 
@@ -16,13 +15,13 @@ DEFAULT_TEMPO = 120
 DEFAULT_VELOCITY = 64
 DEFAULT_PITCH_RANGE = range(21, 109)
 DEFAULT_VELOCITY_RANGE = range(21, 109)
-DEFAULT_NORMALIZATION_BASELINE = 60 # C4
+DEFAULT_NORMALIZATION_BASELINE = 60  # C4
 
 # EventSeq ------------------------------------------------------------------------
 
 USE_VELOCITY = True
 BEAT_LENGTH = 60 / DEFAULT_TEMPO
-DEFAULT_TIME_SHIFT_BINS = 1.15 ** np.arange(100) / 65
+DEFAULT_TIME_SHIFT_BINS = 1.15 ** np.arange(32) / 65
 DEFAULT_VELOCITY_STEPS = 32
 DEFAULT_NOTE_LENGTH = BEAT_LENGTH * 2
 MIN_NOTE_LENGTH = BEAT_LENGTH / 2
@@ -33,12 +32,12 @@ DEFAULT_WINDOW_SIZE = BEAT_LENGTH * 4
 DEFAULT_NOTE_DENSITY_BINS = np.arange(12) * 3 + 1
 
 
-#==================================================================================
+# ==================================================================================
 # Notes
-#==================================================================================
+# ==================================================================================
 
 class NoteSeq:
-    
+
     @staticmethod
     def from_midi(midi, programs=DEFAULT_LOADING_PROGRAMS):
         notes = itertools.chain(*[
@@ -63,7 +62,7 @@ class NoteSeq:
                 assert isinstance(note, Note)
             notes = filter(lambda note: note.end >= note.start, notes)
             self.add_notes(list(notes))
-    
+
     def copy(self):
         return copy.deepcopy(self)
 
@@ -95,12 +94,12 @@ class NoteSeq:
             velocity = 0 if velocity < 0 else velocity
             velocity = 127 if velocity > 127 else velocity
             note.velocity = velocity
-    
+
     def adjust_time(self, offset):
         for note in self.notes:
             note.start += offset
             note.end += offset
-    
+
     def trim_overlapped_notes(self, min_interval=0):
         last_notes = {}
         for i, note in enumerate(self.notes):
@@ -116,10 +115,9 @@ class NoteSeq:
                 last_notes[note.pitch] = note
 
 
-
-#==================================================================================
+# ==================================================================================
 # Events
-#==================================================================================
+# ==================================================================================
 
 class Event:
 
@@ -127,14 +125,13 @@ class Event:
         self.type = type
         self.time = time
         self.value = value
-    
+
     def __repr__(self):
         return 'Event(type={}, time={}, value={})'.format(
             self.type, self.time, self.value)
 
 
 class EventSeq:
-
     pitch_range = DEFAULT_PITCH_RANGE
     velocity_range = DEFAULT_VELOCITY_RANGE
     velocity_steps = DEFAULT_VELOCITY_STEPS
@@ -159,8 +156,8 @@ class EventSeq:
                 pitch_index = note.pitch - EventSeq.pitch_range.start
                 note_events.append(Event('note_on', note.start, pitch_index))
                 note_events.append(Event('note_off', note.end, pitch_index))
-        
-        note_events.sort(key=lambda event: event.time) # stable
+
+        note_events.sort(key=lambda event: event.time)  # stable
         events = []
 
         for i, event in enumerate(note_events):
@@ -222,14 +219,14 @@ class EventSeq:
     def get_velocity_bins():
         n = EventSeq.velocity_range.stop - EventSeq.velocity_range.start
         return np.arange(
-                EventSeq.velocity_range.start,
-                EventSeq.velocity_range.stop,
-                n / (EventSeq.velocity_steps - 1))
+            EventSeq.velocity_range.start,
+            EventSeq.velocity_range.stop,
+            n / (EventSeq.velocity_steps - 1))
 
     def __init__(self, events=[]):
         for event in events:
             assert isinstance(event, Event)
-        
+
         self.events = copy.deepcopy(events)
 
         # compute event times again
@@ -238,11 +235,11 @@ class EventSeq:
             event.time = time
             if event.type == 'time_shift':
                 time += EventSeq.time_shift_bins[event.value]
-    
+
     def to_note_seq(self):
         time = 0
         notes = []
-        
+
         velocity = DEFAULT_VELOCITY
         velocity_bins = EventSeq.get_velocity_bins()
 
@@ -262,7 +259,7 @@ class EventSeq:
                     note = last_notes[pitch]
                     note.end = max(time, note.start + MIN_NOTE_LENGTH)
                     del last_notes[pitch]
-            
+
             elif event.type == 'velocity':
                 index = min(event.value, velocity_bins.size - 1)
                 velocity = velocity_bins[index]
@@ -285,31 +282,29 @@ class EventSeq:
         return np.array(idxs, dtype=dtype)
 
 
-
-#==================================================================================
+# ==================================================================================
 # Controls
-#==================================================================================
+# ==================================================================================
 
 class Control:
 
     def __init__(self, pitch_histogram, note_density):
-        self.pitch_histogram = pitch_histogram # list
-        self.note_density = note_density # int
-    
+        self.pitch_histogram = pitch_histogram  # list
+        self.note_density = note_density  # int
+
     def __repr__(self):
         return 'Control(pitch_histogram={}, note_density={})'.format(
-                self.pitch_histogram, self.note_density)
-    
+            self.pitch_histogram, self.note_density)
+
     def to_array(self):
         feat_dims = ControlSeq.feat_dims()
         ndens = np.zeros([feat_dims['note_density']])
-        ndens[self.note_density] = 1. # [dens_dim]
-        phist = np.array(self.pitch_histogram) # [hist_dim]
-        return np.concatenate([ndens, phist], 0) # [dens_dim + hist_dim]
+        ndens[self.note_density] = 1.  # [dens_dim]
+        phist = np.array(self.pitch_histogram)  # [hist_dim]
+        return np.concatenate([ndens, phist], 0)  # [dens_dim + hist_dim]
 
 
 class ControlSeq:
-
     note_density_bins = DEFAULT_NOTE_DENSITY_BINS
     window_size = DEFAULT_WINDOW_SIZE
 
@@ -327,7 +322,7 @@ class ControlSeq:
             return (pitch - 24) % 12
 
         for i, event in enumerate(events):
-            
+
             while start < i:
                 if events[start].type == 'note_on':
                     abs_pitch = events[start].value + EventSeq.pitch_range.start
@@ -353,8 +348,8 @@ class ControlSeq:
             ).tolist()
 
             note_density = max(np.searchsorted(
-                    ControlSeq.note_density_bins,
-                    note_count, side='right') - 1, 0)
+                ControlSeq.note_density_bins,
+                note_count, side='right') - 1, 0)
 
             controls.append(Control(pitch_histogram, note_density))
 
@@ -380,15 +375,15 @@ class ControlSeq:
             feat_ranges[feat_name] = range(offset, offset + feat_dim)
             offset += feat_dim
         return feat_ranges
-    
+
     @staticmethod
     def recover_compressed_array(array):
         feat_dims = ControlSeq.feat_dims()
         assert array.shape[1] == 1 + feat_dims['pitch_histogram']
         ndens = np.zeros([array.shape[0], feat_dims['note_density']])
-        ndens[np.arange(array.shape[0]), array[:, 0]] = 1. # [steps, dens_dim]
-        phist = array[:, 1:].astype(np.float64) / 255 # [steps, hist_dim]
-        return np.concatenate([ndens, phist], 1) # [steps, dens_dim + hist_dim]
+        ndens[np.arange(array.shape[0]), array[:, 0]] = 1.  # [steps, dens_dim]
+        phist = array[:, 1:].astype(np.float64) / 255  # [steps, hist_dim]
+        return np.concatenate([ndens, phist], 1)  # [steps, dens_dim + hist_dim]
 
     def __init__(self, controls):
         for control in controls:
@@ -401,10 +396,9 @@ class ControlSeq:
         phist = [control.pitch_histogram for control in self.controls]
         phist = (np.array(phist) * 255).astype(np.uint8)
         return np.concatenate([
-            ndens, # [steps, 1] density index
-            phist # [steps, hist_dim] 0-255
-        ], 1) # [steps, hist_dim + 1]
-    
+            ndens,  # [steps, 1] density index
+            phist  # [steps, hist_dim] 0-255
+        ], 1)  # [steps, hist_dim + 1]
 
 
 if __name__ == '__main__':
@@ -417,7 +411,7 @@ if __name__ == '__main__':
     print(len(es.to_array()))
 
     print('Converting EventSeq to MIDI')
-    EventSeq.from_array(es.to_array()).to_note_seq().to_midi_file('./tmp/test.mid')
+    EventSeq.from_array(es.to_array()).to_note_seq().to_midi_file('./test.mid')
 
     print('Converting EventSeq to ControlSeq')
     cs = ControlSeq.from_event_seq(es)
