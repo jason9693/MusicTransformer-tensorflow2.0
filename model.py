@@ -35,7 +35,9 @@ class MusicTransformerV2:
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
         FFN = keras.layers.Dense(self.embedding_dim)(FFN)
-        FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
+
+        FFN = keras.layers.Add()([FFN, residual])
+        FFN = keras.layers.LayerNormalization()(FFN)
         return FFN
 
     def _build_model(self):
@@ -65,8 +67,6 @@ class MusicTransformerV2:
 
     def processed_y(self, y: np.array):
         return np.eye(self.vocab_size)[y]
-
-
 
 
 class MusicTransformer(keras.Model):
