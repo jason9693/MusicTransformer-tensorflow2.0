@@ -70,6 +70,7 @@ class MusicTransformerV2:
             for time in range(self.max_seq):
                 x_cur = x[:,:time+1]
                 y_cur = x[:,time+1]
+                x_cur = tf.dtypes.cast(x_cur,dtype=tf.float64)
                 y_cur = tf.dtypes.cast(y_cur, dtype=tf.int32)
                 y_cur = tf.one_hot(y_cur, depth=self.vocab_size, axis=-1)
                 x_cur = tf.concat([x_cur, placeholder[:,0:self.max_seq - x_cur.shape[1]]], axis = -1)
