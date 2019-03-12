@@ -75,11 +75,12 @@ class MusicTransformerV2:
                 pred = pred[:,time]
 
                 loss += keras.losses.CategoricalCrossentropy()(y_true = y_cur, y_pred = pred)
+                print(loss)
 
         vars = self.model.trainable_variables
         grads = tape.gradient(loss, vars)
         optim.apply_gradients(zip(grads, vars))
-        return loss
+        return loss / self.max_seq
 
     def _fill_with_placeholder(self, prev_data, max_len: int, max_val: float = 239):
         placeholder = [max_val for _ in range(max_len - prev_data.shape[1])]
