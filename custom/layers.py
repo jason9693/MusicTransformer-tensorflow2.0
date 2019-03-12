@@ -3,6 +3,19 @@ import math as m
 from tensorflow.python import keras
 import numpy as np
 
+def sinusoid(max_seq, embedding_dim):
+    return np.array([[
+        [
+            m.sin(
+                pos * m.exp(-m.log(10000) * i / embedding_dim) * m.exp(
+                    m.log(10000) / embedding_dim * (i % 2)) + 0.5 * m.pi * (i % 2)
+            )
+            for i in range(embedding_dim)
+        ]
+        for pos in range(max_seq)
+    ]])
+
+
 class ExpandDims(keras.layers.Layer):
     def __init__(self, axis=-1, **kwargs):
         super().__init__(**kwargs)
@@ -37,13 +50,15 @@ class RelativeGlobalAttention(keras.layers.Layer):
     from Music Transformer ( Huang et al, 2018 )
     [paper link](https://arxiv.org/pdf/1809.04281.pdf)
     '''
-    def __init__(self ,Dh , D=256, **kwargs):
+    def __init__(self ,Dh , D=256, max_seq = 2048,**kwargs):
         super().__init__(**kwargs)
         self.Dh = float(Dh)
         self.D = D
         self.Wq = self.add_variable("Wq", shape=[int(self.D), int(self.D)])
         self.Wk = self.add_variable("Wk", shape=[int(self.D), int(self.D)])
         self.Wv = self.add_variable("Wv", shape=[int(self.D), int(self.D)])
+        self.EmbeddingVar = self.add_variable('emb', shape=[max_seq, self.D])
+        self.max_seq = max_seq
 
 
     def call(self, inputs, **kwargs):
@@ -61,10 +76,15 @@ class RelativeGlobalAttention(keras.layers.Layer):
         K = tf.tensordot(inputK, self.Wk, [[2],[0]])
         V = tf.tensordot(inputV, self.Wv, [[2],[0]])
 
-        E = K - Q
-        E = tf.transpose(E,[0,2,1])
+        mat = [self.max_seq - 1 - i for i in range(inputs[0].shape[1])]
+        mat = tf.constant(mat, dtype=tf.int32)
+        #mat = tf.one_hot(mat,depth=inputs[0].shape[1])
 
-        QE = tf.matmul(Q,E)
+        E = tf.nn.embedding_lookup(self.EmbeddingVar, mat)
+        #E = K - Q
+        E = tf.transpose(E,[1,0])
+
+        QE = tf.tensordot(Q,E, [[2],[0]])
         Srel = self._skewing(QE)
         Kt = tf.transpose(K,[0,2,1])
         QKt = tf.matmul(Q,Kt)
@@ -113,9 +133,44 @@ class SeqLoss(keras.losses.CategoricalCrossentropy):
     def processed_y(self, y: np.array):
         return np.eye(self.len_word)[y]
 
+
+
+
+
 if __name__ == '__main__':
     pass
     # loss = SeqLoss(240)
     # print(loss.processed_y(np.zeros([10,2048], dtype=np.int)).shape)
     # mock = np.ones([10, 2048], dtype=np.int)
     # print(loss(mock, mock))
+
+    embedding_dim = 512
+    max_seq = 2048
+
+    embed_sinusoid_list = np.array([[
+        [
+            m.sin(
+                pos * m.exp(-m.log(10000) * i / embedding_dim) * m.exp(
+                    m.log(10000) / embedding_dim * (i % 2)) + 0.5 * m.pi * (i % 2)
+            )
+            for i in range(embedding_dim)
+        ]
+        for pos in range(max_seq)
+    ]])
+
+    # embed_sinusoid_list = [
+    #     [
+    #         m.sin(
+    #             m.pow(
+    #                 (pos * 0.00001), i / embedding_dim
+    #             ) - m.pi * 0.5 * ((i + 1) % 2)
+    #         )
+    #         for i in range(embedding_dim)
+    #     ]
+    #     for pos in range(max_seq)
+    # ]
+
+    import matplotlib.pyplot as plt
+    plt.plot(embed_sinusoid_list[0,:,:])
+    plt.show()
+
