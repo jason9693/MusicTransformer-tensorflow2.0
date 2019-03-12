@@ -64,17 +64,22 @@ class MusicTransformerV2:
     def train(self, x):
         loss = 0
         optim = tf.optimizers.Adam()
+        placeholder = np.array([[239 for _ in range(self.max_seq)]] * x.shape[0])
+
         with tf.GradientTape() as tape:
             for time in range(self.max_seq):
                 x_cur = x[:,:time+1]
                 y_cur = x[:,time+1]
                 y_cur = tf.dtypes.cast(y_cur, dtype=tf.int32)
                 y_cur = tf.one_hot(y_cur, depth=self.vocab_size, axis=-1)
-                x_cur = self._fill_with_placeholder(x_cur, self.max_seq, 239)
+                x_cur = tf.concat([x_cur, placeholder[:,0:range(self.max_seq - x.shape[1])]])
                 pred = self.model(x_cur)
                 pred = pred[:,time]
+                x_cur = None
 
-                loss += keras.losses.CategoricalCrossentropy()(y_true = y_cur, y_pred = pred)
+                loss += tf.reduce_mean(
+                    keras.losses.CategoricalCrossentropy()(y_true = y_cur, y_pred = pred)
+                )
                 print(loss)
 
         vars = self.model.trainable_variables
