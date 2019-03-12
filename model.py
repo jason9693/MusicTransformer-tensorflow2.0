@@ -1,7 +1,8 @@
 from custom.layers import *
 import numpy as np
-from tensorflow.python import keras
+from tensorflow.python import keras, enable_eager_execution
 tf.executing_eagerly()
+enable_eager_execution()
 
 class MusicTransformerV2:
     def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
@@ -59,15 +60,37 @@ class MusicTransformerV2:
         model = keras.Model(x, fc)
         return model
 
-    def train(self, x, y, mode_params = {'batch':10, 'epoch':100}):
-        if mode_params is not None:
-            return self.model.fit(x, y, batch_size=mode_params['batch'], epochs=mode_params['epoch'])
-        else:
-            return self.model.train_on_batch(x,y)
+    @tf.function
+    def train(self, x):
+        loss = 0
+        optim = tf.optimizers.Adam()
+        with tf.GradientTape() as tape:
+            for time in range(self.max_seq):
+                x_cur = x[:,:time+1]
+                y_cur = x[:,time+1]
+                y_cur = tf.dtypes.cast(y_cur, dtype=tf.int32)
+                y_cur = tf.one_hot(y_cur, depth=self.vocab_size, axis=-1)
+                x_cur = self._fill_with_placeholder(x_cur, self.max_seq, 239)
+                pred = self.model(x_cur)
+                pred = pred[:,time]
+
+                loss += keras.losses.CategoricalCrossentropy()(y_true = y_cur, y_pred = pred)
+
+        vars = self.model.trainable_variables
+        grads = tape.gradient(loss, vars)
+        optim.apply_gradients(zip(grads, vars))
+        return loss
+
+    def _fill_with_placeholder(self, prev_data, max_len: int, max_val: float = 239):
+        placeholder = [max_val for _ in range(max_len - prev_data.shape[1])]
+        return tf.concat([prev_data, [placeholder] * prev_data.shape[0]], axis=-1)
 
     def processed_y(self, y: np.array):
         return np.eye(self.vocab_size)[y]
 
+    # def _loss(self, real, pred):
+    #
+    #     pass
 
 class MusicTransformer(keras.Model):
     def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
@@ -160,7 +183,9 @@ class MusicTransformer(keras.Model):
 
 
 if __name__ == '__main__':
-    mt = MusicTransformer(512)
-    out = mt(tf.constant(shape=[10, 2048], value=0.0))
-    print(out.shape)
+    # mt = MusicTransformer(512)
+    # out = mt(tf.constant(shape=[10, 2048], value=0.0))
+    # print(out.shape)
+    mt = MusicTransformerV2()
+    mt.train(np.ones(shape=[10, 2048]))
     pass
