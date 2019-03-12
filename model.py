@@ -72,7 +72,7 @@ class MusicTransformerV2:
                 y_cur = x[:,time+1]
                 y_cur = tf.dtypes.cast(y_cur, dtype=tf.int32)
                 y_cur = tf.one_hot(y_cur, depth=self.vocab_size, axis=-1)
-                x_cur = tf.concat([x_cur, placeholder[:,0:range(self.max_seq - x.shape[1])]])
+                x_cur = tf.concat([x_cur, placeholder[:,0:self.max_seq - x_cur.shape[1]]], axis = -1)
                 pred = self.model(x_cur)
                 pred = pred[:,time]
                 x_cur = None
@@ -80,11 +80,11 @@ class MusicTransformerV2:
                 loss += tf.reduce_mean(
                     keras.losses.CategoricalCrossentropy()(y_true = y_cur, y_pred = pred)
                 )
-                print(loss)
 
         vars = self.model.trainable_variables
         grads = tape.gradient(loss, vars)
         optim.apply_gradients(zip(grads, vars))
+        print(loss)
         return loss / self.max_seq
 
     def _fill_with_placeholder(self, prev_data, max_len: int, max_val: float = 239):
@@ -193,5 +193,5 @@ if __name__ == '__main__':
     # out = mt(tf.constant(shape=[10, 2048], value=0.0))
     # print(out.shape)
     mt = MusicTransformerV2()
-    mt.train(np.ones(shape=[10, 2048]))
+    mt.train(np.ones(shape=[10, 2049]))
     pass
