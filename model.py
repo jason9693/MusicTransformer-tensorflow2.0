@@ -83,6 +83,12 @@ class MusicTransformerV2:
                 )
                 print(loss)
 
+                if time % 100 == 0:
+                    vars = self.model.trainable_variables
+                    grads = tape.gradient(loss, vars)
+                    optim.apply_gradients(zip(grads, vars))
+                    loss = 0
+
         vars = self.model.trainable_variables
         grads = tape.gradient(loss, vars)
         optim.apply_gradients(zip(grads, vars))
