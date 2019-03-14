@@ -1,4 +1,5 @@
 from custom.layers import *
+from custom.callback import *
 import numpy as np
 from tensorflow.python import keras, enable_eager_execution
 tf.executing_eagerly()
@@ -16,7 +17,7 @@ class MusicTransformerV2:
         self.model = self._build_model()
 
         optim = keras.optimizers.Adam(l_r)
-        loss_func = keras.losses.CategoricalCrossentropy()
+        loss_func = TransformerLoss()
         self.model.compile(optim, loss=loss_func,  metrics = ['accuracy'])
         pass
 
@@ -28,13 +29,13 @@ class MusicTransformerV2:
         add_and_norm = keras.layers.Add()([decoder1, input_tensor])
         add_and_norm = keras.layers.LayerNormalization()(add_and_norm)
 
-        # decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
-        # decoder2 = keras.layers.Dropout(rate=self.dropout)(decoder2)
-        #
-        # residual = keras.layers.Add()([decoder2, add_and_norm])
-        # residual = keras.layers.LayerNormalization()(residual)
+        decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
+        decoder2 = keras.layers.Dropout(rate=self.dropout)(decoder2)
 
-        residual = add_and_norm
+        residual = keras.layers.Add()([decoder2, add_and_norm])
+        residual = keras.layers.LayerNormalization()(residual)
+
+        #residual = add_and_norm
 
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
@@ -211,5 +212,5 @@ if __name__ == '__main__':
     print(tf.executing_eagerly())
     mt = MusicTransformerV2()
     print(mt.model.summary())
-    #mt.train(np.ones(shape=[10, 2049]))
+    #mt.model.fit(x=np.ones(shape=[10, 2049]), y=)
     pass
