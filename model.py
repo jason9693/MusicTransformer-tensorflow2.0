@@ -28,11 +28,13 @@ class MusicTransformerV2:
         add_and_norm = keras.layers.Add()([decoder1, input_tensor])
         add_and_norm = keras.layers.LayerNormalization()(add_and_norm)
 
-        decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
-        decoder2 = keras.layers.Dropout(rate=self.dropout)(decoder2)
+        # decoder2 = RelativeGlobalAttention(64)([add_and_norm, add_and_norm, add_and_norm])
+        # decoder2 = keras.layers.Dropout(rate=self.dropout)(decoder2)
+        #
+        # residual = keras.layers.Add()([decoder2, add_and_norm])
+        # residual = keras.layers.LayerNormalization()(residual)
 
-        residual = keras.layers.Add()([decoder2, add_and_norm])
-        residual = keras.layers.LayerNormalization()(residual)
+        residual = add_and_norm
 
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
@@ -206,6 +208,8 @@ if __name__ == '__main__':
     # mt = MusicTransformer(512)
     # out = mt(tf.constant(shape=[10, 2048], value=0.0))
     # print(out.shape)
+    print(tf.executing_eagerly())
     mt = MusicTransformerV2()
-    mt.train(np.ones(shape=[10, 2049]))
+    print(mt.model.summary())
+    #mt.train(np.ones(shape=[10, 2049]))
     pass

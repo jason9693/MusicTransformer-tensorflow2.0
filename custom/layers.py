@@ -54,10 +54,10 @@ class RelativeGlobalAttention(keras.layers.Layer):
         super().__init__(**kwargs)
         self.Dh = float(Dh)
         self.D = D
-        self.Wq = self.add_variable("Wq", shape=[int(self.D), int(self.D)])
-        self.Wk = self.add_variable("Wk", shape=[int(self.D), int(self.D)])
+        self.Wq = self.add_variable("Wq", shape=[int(self.D), int(self.D/2)])
+        self.Wk = self.add_variable("Wk", shape=[int(self.D), int(self.D/2)])
         self.Wv = self.add_variable("Wv", shape=[int(self.D), int(self.D)])
-        self.EmbeddingVar = self.add_variable('emb', shape=[max_seq, self.D])
+        self.EmbeddingVar = self.add_variable('emb', shape=[max_seq, int(self.D/2)])
         self.max_seq = max_seq
 
 
@@ -81,7 +81,6 @@ class RelativeGlobalAttention(keras.layers.Layer):
         #mat = tf.one_hot(mat,depth=inputs[0].shape[1])
 
         E = tf.nn.embedding_lookup(self.EmbeddingVar, mat)
-        #E = K - Q
         E = tf.transpose(E,[1,0])
 
         QE = tf.tensordot(Q,E, [[2],[0]])
@@ -100,7 +99,6 @@ class RelativeGlobalAttention(keras.layers.Layer):
         pad = pad[:,:,0]
         pad = tf.expand_dims(pad,2)
         cat = tf.concat([pad, tensor], 2)
-
         reshaped = tf.reshape(cat, shape=[-1, cat.shape[2], cat.shape[1]])
 
         Srel = tf.slice(reshaped, [0,1,0], [-1, reshaped.shape[2], reshaped.shape[2]])
