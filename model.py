@@ -41,6 +41,7 @@ class MusicTransformerV2:
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
         FFN = keras.layers.Dense(self.embedding_dim)(FFN)
+        FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
 
         FFN = keras.layers.Add()([FFN, residual])
         FFN = keras.layers.LayerNormalization()(FFN)
