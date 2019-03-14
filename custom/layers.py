@@ -95,8 +95,8 @@ class RelativeGlobalAttention(keras.layers.Layer):
 
     def _skewing(self, tensor: tf.Tensor):
 
-        pad = tf.zeros_like(tensor)
-        pad = pad[:,:,0]
+        pad = tf.zeros_like(tensor[:,:,0])
+        # pad = pad[:,:,0]
         pad = tf.expand_dims(pad,2)
         cat = tf.concat([pad, tensor], 2)
         reshaped = tf.reshape(cat, shape=[-1, cat.shape[2], cat.shape[1]])
@@ -115,21 +115,21 @@ class View1D(keras.layers.Layer):
     def call(self, inputs, **kwargs):
         return inputs[:,self.axis]
 
-class SeqLoss(keras.losses.CategoricalCrossentropy):
-    def __init__(self, vocab_size):
-        super(SeqLoss, self).__init__()
-        self.len_word = vocab_size
-        pass
-
-    def call(self, y_true, y_pred):
-        print(y_true)
-        print(y_pred)
-        y_true = np.array(y_true, dtype=np.int)
-        y_true = self.processed_y(y_true)
-        return super().call(y_true, y_pred)
-
-    def processed_y(self, y: np.array):
-        return np.eye(self.len_word)[y]
+# class SeqLoss(keras.losses.CategoricalCrossentropy):
+#     def __init__(self, vocab_size):
+#         super(SeqLoss, self).__init__()
+#         self.len_word = vocab_size
+#         pass
+#
+#     def call(self, y_true, y_pred):
+#         print(y_true)
+#         print(y_pred)
+#         y_true = np.array(y_true, dtype=np.int)
+#         y_true = self.processed_y(y_true)
+#         return super().call(y_true, y_pred)
+#
+#     def processed_y(self, y: np.array):
+#         return np.eye(self.len_word)[y]
 
 
 
