@@ -16,7 +16,7 @@ class MusicTransformerV2:
         self.dropout = dropout
         self.model = self._build_model()
 
-        optim = keras.optimizers.Adam(l_r)
+        optim = keras.optimizers.Adam(lr=l_r, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
         # loss_func = TransformerLoss()
         self.model.compile(optim, loss='categorical_crossentropy',  metrics = ['accuracy'])
         pass
