@@ -17,8 +17,8 @@ class MusicTransformerV2:
         self.model = self._build_model()
 
         optim = keras.optimizers.Adam(l_r)
-        loss_func = TransformerLoss()
-        self.model.compile(optim, loss=loss_func,  metrics = ['accuracy'])
+        # loss_func = TransformerLoss()
+        self.model.compile(optim, loss='categorical_crossentropy',  metrics = ['accuracy'])
         pass
 
     def _decoder(self, input_tensor, activation=None, layer=0):
@@ -35,8 +35,6 @@ class MusicTransformerV2:
 
         residual = keras.layers.Add()([decoder2, add_and_norm])
         residual = keras.layers.LayerNormalization()(residual)
-
-        #residual = add_and_norm
 
         FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
@@ -65,46 +63,6 @@ class MusicTransformerV2:
         fc = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(decoder_input)
         model = keras.Model(x, fc)
         return model
-
-    # @tf.function
-    # def train(self, x):
-    #     loss = 0
-    #     optim = tf.optimizers.Adam()
-    #     placeholder = tf.constant([[239 for _ in range(self.max_seq)]] * x.shape[0], dtype=tf.float64)
-    #
-    #     with tf.GradientTape() as tape:
-    #         for time in range(self.max_seq):
-    #             x_cur = x[:,:time+1]
-    #             y_cur = x[:,time+1]
-    #             x_cur = tf.dtypes.cast(x_cur,dtype=tf.float64)
-    #             y_cur = tf.dtypes.cast(y_cur, dtype=tf.int32)
-    #             y_cur = tf.one_hot(y_cur, depth=self.vocab_size, axis=-1)
-    #             x_cur = tf.concat([x_cur, placeholder[:,0:self.max_seq - x_cur.shape[1]]], axis = -1)
-    #             pred = self.model(x_cur)
-    #             pred = pred[:,time]
-    #             x_cur = None
-    #
-    #             loss += tf.reduce_mean(
-    #                 keras.losses.CategoricalCrossentropy()(y_true = y_cur, y_pred = pred)
-    #             )
-    #             print(loss)
-    #
-    #             if time % 100 == 0:
-    #                 vars = self.model.trainable_variables
-    #                 grads = tape.gradient(loss, vars)
-    #                 optim.apply_gradients(zip(grads, vars))
-    #                 loss = 0
-    #
-    #     vars = self.model.trainable_variables
-    #     grads = tape.gradient(loss, vars)
-    #     optim.apply_gradients(zip(grads, vars))
-    #
-    #     return loss / self.max_seq
-
-    # @tf.function
-    # def trainV2(self, x, y):
-    #     y_pred = self.model(x)
-
 
     def _fill_with_placeholder(self, prev_data, max_len: int, max_val: float = 239):
         placeholder = [max_val for _ in range(max_len - prev_data.shape[1])]

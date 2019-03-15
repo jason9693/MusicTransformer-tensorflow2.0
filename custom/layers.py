@@ -60,7 +60,6 @@ class RelativeGlobalAttention(keras.layers.Layer):
         self.EmbeddingVar = self.add_variable('emb', shape=[max_seq, int(self.D/2)])
         self.max_seq = max_seq
 
-
     def call(self, inputs, **kwargs):
         '''
         :param inputs: a list of tensors. i.e) [Q, K, V]
@@ -76,11 +75,7 @@ class RelativeGlobalAttention(keras.layers.Layer):
         K = tf.tensordot(inputK, self.Wk, [[2],[0]])
         V = tf.tensordot(inputV, self.Wv, [[2],[0]])
 
-        # mat = [self.max_seq - 1 - i for i in range(inputs[0].shape[1])]
-        # mat = tf.constant(mat, dtype=tf.int32)
-
         E = self.EmbeddingVar
-        #tf.nn.embedding_lookup(self.EmbeddingVar, mat)
         E = tf.transpose(E,[1,0])
 
         QE = tf.tensordot(Q,E, [[2],[0]])
@@ -95,10 +90,8 @@ class RelativeGlobalAttention(keras.layers.Layer):
 
     def _skewing(self, tensor: tf.Tensor):
 
-        pad = tf.zeros_like(tensor[:,:,0])
-        pad = tf.expand_dims(pad,2)
-        cat = tf.concat([pad, tensor], 2)
-        reshaped = tf.reshape(cat, shape=[-1, cat.shape[2], cat.shape[1]])
+        padded = tf.pad(tensor, [[0,0],[0,0],[1,0]])
+        reshaped = tf.reshape(padded, shape=[-1, padded.shape[2], padded.shape[1]])
 
         Srel = tf.slice(reshaped, [0,1,0], [-1, -1, -1])
 
@@ -109,7 +102,6 @@ class View1D(keras.layers.Layer):
     def __init__(self, axis=-1, **kwargs):
         super().__init__(**kwargs)
         self.axis = axis
-
 
     def call(self, inputs, **kwargs):
         return inputs[:,self.axis]
