@@ -38,8 +38,8 @@ class PositionEmbedding(keras.layers.Layer):
         ]] )
         self.positional_embedding = tf.constant(embed_sinusoid_list, dtype=tf.float32)
 
-    def _boolean_calculate(self, i):
-        return int(i%2)
+    # def _boolean_calculate(self, i):
+    #     return int(i%2)
 
     def call(self, inputs, **kwargs):
         return tf.add(inputs,self.positional_embedding)

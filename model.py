@@ -15,13 +15,12 @@ class MusicTransformerV2:
         self.max_seq = max_seq
         self.dropout = dropout
         self.model = self._build_model()
-
         optim = keras.optimizers.Adam(lr=l_r, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
         # loss_func = TransformerLoss()
         self.model.compile(optim, loss='categorical_crossentropy',  metrics = ['accuracy'])
         pass
 
-    def _decoder(self, input_tensor, activation=None, layer=0):
+    def _decoder(self, input_tensor, layer=0):
         if self._debug:
             print('[DEBUG]:{}'.format('decoder called'))
         decoder1 = RelativeGlobalAttention(64)([input_tensor, input_tensor, input_tensor])# Assuming Dh = 64
@@ -36,9 +35,8 @@ class MusicTransformerV2:
         residual = keras.layers.Add()([decoder2, add_and_norm])
         residual = keras.layers.LayerNormalization()(residual)
 
-        FFN = keras.layers.Dense(self.embedding_dim, activation=tf.nn.relu)(residual)
-        FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
-        FFN = keras.layers.Dense(self.embedding_dim)(FFN)
+        FFN = keras.layers.Conv1D(512 ,1, activation=tf.nn.relu)(residual)
+        FFN = keras.layers.Conv1D(self.embedding_dim, 1)(FFN)
         FFN = keras.layers.Dropout(rate=self.dropout)(FFN)
 
         FFN = keras.layers.Add()([FFN, residual])
@@ -55,7 +53,6 @@ class MusicTransformerV2:
         for i in range(self.num_layer):
             decoder = self._decoder(
                 decoder_input,
-                tf.nn.relu,
                 layer=i
             )
             decoder_input = decoder
@@ -71,9 +68,6 @@ class MusicTransformerV2:
     def processed_y(self, y: np.array):
         return np.eye(self.vocab_size)[y]
 
-    # def _loss(self, real, pred):
-    #
-    #     pass
 
 class MusicTransformer(keras.Model):
     def __init__(self, embedding_dim = 256, vocab_size =240, num_layer =6,
@@ -144,20 +138,6 @@ class MusicTransformer(keras.Model):
 
     def processed_y(self, y: np.array):
         return np.eye(self.vocab_size)[y]
-
-# class DecoderBlock(keras.layers.Wrapper):
-#     def __init__(self, layer, **kwargs):
-#         super().__init__(layer, **kwargs)
-#         self.rga1 = RelativeGlobalAttention(64, name=self.name+'_1'),
-#         self.add1 = tf.keras.layers.Add(),
-#         self.rga2 = RelativeGlobalAttention(64, name=self.name+'_2'),
-#         self.add2 = tf.keras.layers.Add(),
-#         self.dense1 = tf.keras.layers.Dense(self.embedding_dim, activation=tf.nn.leaky_relu),
-#         self.dense2 = tf.keras.layers.Dense(self.embedding_dim),
-#         self.bn1 = tf.keras.layers.BatchNormalization(),
-#         self.bn2 = tf.keras.layers.BatchNormalization()
-#         pass
-
 
 
 
