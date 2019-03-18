@@ -106,6 +106,7 @@ class DataSequence(keras.utils.Sequence):
             x = data_batch[:,:-1]
             y = data_batch[:,1:]
         except:
+            print('except')
             return self.__getitem__(idx)
 
         return np.array(x), np.eye(self.vocab_size)[np.array(y)]
@@ -120,4 +121,4 @@ if __name__ == '__main__':
     ds = DataSequence('dataset/processed', 10, 2048)
     #print(data.batch(100, 2048))
     #while True:
-    print(data.sequential_batch(10, 2048))
+    print(ds.__getitem__(10)[1].argmax(-1))
