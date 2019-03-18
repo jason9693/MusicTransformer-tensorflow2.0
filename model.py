@@ -57,7 +57,8 @@ class MusicTransformerV2:
             )
             decoder_input = decoder
 
-        fc = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)(decoder_input)
+        finale = keras.layers.Dense(self.vocab_size, activation=tf.nn.softmax)
+        fc = keras.layers.TimeDistributed(finale)(decoder_input)
         model = keras.Model(x, fc)
         return model
 
