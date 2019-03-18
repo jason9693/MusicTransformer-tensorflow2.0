@@ -46,7 +46,7 @@ class MusicTransformerV2:
     def _build_model(self):
         x = keras.Input([self.max_seq])
         embed = keras.layers.Embedding(self.vocab_size, self.embedding_dim, input_length=self.max_seq)(x)
-        #embed = PositionEmbedding(self.max_seq, self.embedding_dim)(embed)
+        embed = PositionEmbedding(self.max_seq, self.embedding_dim)(embed)
 
         decoder_input = embed
 
