@@ -3,6 +3,9 @@ import random
 import pickle
 from tensorflow.python import keras
 import numpy as np
+import params as par
+import sequence
+
 
 class Data:
     def __init__(self, dir_path):
@@ -35,8 +38,7 @@ class Data:
 
     def sequential_batch(self, batch_size, length):
         batch_data = []
-        data = self._get_seq( self.files[self._seq_file_name_idx] )
-        # for j in range(len(data) - length):
+        data = self._get_seq(self.files[self._seq_file_name_idx])
 
         while len(batch_data) < batch_size:
             while self._seq_idx < len(data) - length:
@@ -51,7 +53,6 @@ class Data:
                 self._seq_file_name_idx = 0
                 print('iter intialized')
 
-
     def _get_seq(self, fname, max_length=None):
         with open(fname, 'rb') as f:
             data = pickle.load(f)
@@ -60,8 +61,8 @@ class Data:
                 start = random.randrange(0,len(data) - max_length)
                 data = data[start:start + max_length]
 
-
         return data
+
 
 class PositionalY:
     def __init__(self, data, idx):
@@ -77,8 +78,9 @@ class PositionalY:
     def __repr__(self):
         return '<Label located in {} position.>'.format(self.idx)
 
+
 class DataSequence(keras.utils.Sequence):
-    def __init__(self, path, batch_size, seq_len, vocab_size = 240):
+    def __init__(self, path, batch_size, seq_len, vocab_size=sequence.EventSeq.dim()):
         self.data = Data(path)
         self.batch_size = batch_size
         self.file_idx = 0
@@ -86,7 +88,6 @@ class DataSequence(keras.utils.Sequence):
         self.vocab_size = vocab_size
         self.seq_len = seq_len
         pass
-
 
     def _update_cache(self):
         if self.file_idx < len(self.data.files)-1:
@@ -112,9 +113,7 @@ class DataSequence(keras.utils.Sequence):
         return np.array(x), np.eye(self.vocab_size)[np.array(y)]
 
 
-def fill_with_placeholder(prev_data: list, max_len: int, max_val: float=239):
-    placeholder = [max_val for _ in range(max_len - len(prev_data))]
-    return prev_data + placeholder
+
 
 if __name__ == '__main__':
     data = Data('dataset/processed')

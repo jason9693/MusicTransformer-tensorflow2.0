@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from sequence import EventSeq, ControlSeq
-
+import tensorflow as tf
+import params as par
 
 def find_files_by_extensions(root, exts=[]):
     def _has_ext(name):
@@ -17,6 +18,7 @@ def find_files_by_extensions(root, exts=[]):
             if _has_ext(name):
                 yield os.path.join(path, name)
 
+
 def event_indeces_to_midi_file(event_indeces, midi_file_name, velocity_scale=0.8):
     event_seq = EventSeq.from_array(event_indeces)
     note_seq = event_seq.to_note_seq()
@@ -24,6 +26,7 @@ def event_indeces_to_midi_file(event_indeces, midi_file_name, velocity_scale=0.8
         note.velocity = int((note.velocity - 64) * velocity_scale + 64)
     note_seq.to_midi_file(midi_file_name)
     return len(note_seq.notes)
+
 
 def transposition(events, controls, offset=0):
     # events [steps, batch_size, event_dim]
@@ -58,8 +61,10 @@ def transposition(events, controls, offset=0):
 
     return events, controls
 
+
 def dict2params(d, f=','):
     return f.join(f'{k}={v}' for k, v in d.items())
+
 
 def params2dict(p, f=',', e='='):
     d = {}
@@ -71,6 +76,7 @@ def params2dict(p, f=',', e='='):
         d[k] = eval('='.join(v))
     return d
 
+
 def compute_gradient_norm(parameters, norm_type=2):
     total_norm = 0
     for p in parameters:
@@ -78,3 +84,45 @@ def compute_gradient_norm(parameters, norm_type=2):
         total_norm += param_norm ** norm_type
     total_norm = total_norm ** (1. / norm_type)
     return total_norm
+
+
+def get_masked_with_pad_tensor(size, src, trg=None):
+    """
+    :param size: the size of input
+    :param src: source tensor
+    :param trg: target tensor
+    :return:
+    """
+    src_pad_tensor = tf.ones_like(src) * par.pad_token
+    src_mask = tf.cast(tf.not_equal(src, src_pad_tensor), dtype=tf.int32)
+    if trg is not None:
+        trg_pad_tensor = tf.ones_like(trg) * par.pad_token
+        trg_mask = tf.cast(tf.not_equal(trg, trg_pad_tensor), dtype=tf.int32)
+
+        # boolean reversing i.e) True * -1 + 1 = False
+        seq_mask = tf.sequence_mask(range(1, size+1), size, dtype=tf.int32) * -1 + 1
+        trg_mask = tf.cast(tf.equal(trg_mask, seq_mask), dtype=tf.int32)
+    else:
+        trg_mask = None
+
+    return src_mask, trg_mask
+
+
+def get_mask_tensor(size):
+    """
+    :param size: max length of token
+    :return:
+    """
+    # boolean reversing i.e) True * -1 + 1 = False
+    seq_mask = tf.sequence_mask(range(1, size + 1), size, dtype=tf.int32) * -1 + 1
+    return seq_mask
+
+
+def fill_with_placeholder(prev_data: list, max_len: int, fill_val: float=0):
+    placeholder = [fill_val for _ in range(max_len - len(prev_data))]
+    return prev_data + placeholder
+
+# if __name__ == '__main__':
+#
+#     test_array =
+

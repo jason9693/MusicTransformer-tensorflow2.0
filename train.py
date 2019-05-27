@@ -1,11 +1,9 @@
-from model import MusicTransformerV2, MusicTransformer
-import tensorflow as tf
-import numpy as np
-import params as par
-import sequence
-import utils
-import time
+from model import MusicTransformerV2
+from custom.layers import *
 from tensorflow.python import keras
+from tensorflow.python import enable_eager_execution
+enable_eager_execution()
+
 tf.executing_eagerly()
 
 if __name__ == '__main__':
@@ -27,3 +25,4 @@ if __name__ == '__main__':
     # print('update per time: {}'.format(end_time-start_time))
     mt = MusicTransformerV2()
     print(mt.model.summary())
+    print(mt.model.compile(optimizer=keras.optimizers.Adam(0.001), loss='categorical_crossentropy', metrics=['accuracy']))

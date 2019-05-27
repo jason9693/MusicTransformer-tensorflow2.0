@@ -13,7 +13,8 @@ DEFAULT_LOADING_PROGRAMS = range(128)
 DEFAULT_RESOLUTION = 220
 DEFAULT_TEMPO = 120
 DEFAULT_VELOCITY = 64
-DEFAULT_PITCH_RANGE = range(21, 109)
+# DEFAULT_PITCH_RANGE = range(21, 109)
+DEFAULT_PITCH_RANGE = range(0, 128)
 DEFAULT_VELOCITY_RANGE = range(21, 109)
 DEFAULT_NORMALIZATION_BASELINE = 60  # C4
 
@@ -21,7 +22,9 @@ DEFAULT_NORMALIZATION_BASELINE = 60  # C4
 
 USE_VELOCITY = True
 BEAT_LENGTH = 60 / DEFAULT_TEMPO
-DEFAULT_TIME_SHIFT_BINS = 1.15 ** np.arange(32) / 65
+# DEFAULT_TIME_SHIFT_BINS = 1.15 ** (np.arange(100) / 100)
+DEFAULT_TIME_SHIFT_BINS = 1.15 ** np.arange(100) / (1.15 ** 99)
+
 DEFAULT_VELOCITY_STEPS = 32
 DEFAULT_NOTE_LENGTH = BEAT_LENGTH * 2
 MIN_NOTE_LENGTH = BEAT_LENGTH / 2
@@ -199,11 +202,11 @@ class EventSeq:
     @staticmethod
     def feat_dims():
         feat_dims = collections.OrderedDict()
+        feat_dims['time_shift'] = len(EventSeq.time_shift_bins)
         feat_dims['note_on'] = len(EventSeq.pitch_range)
         feat_dims['note_off'] = len(EventSeq.pitch_range)
         if USE_VELOCITY:
             feat_dims['velocity'] = EventSeq.velocity_steps
-        feat_dims['time_shift'] = len(EventSeq.time_shift_bins)
         return feat_dims
 
     @staticmethod
@@ -403,24 +406,33 @@ class ControlSeq:
 
 if __name__ == '__main__':
     import pickle, sys
-    path = sys.argv[1] if len(sys.argv) > 1 else 'dataset/midi/ahead_on_our_way_piano.mid'
+
+    path = sys.argv[1] if len(sys.argv) > 1 else 'dataset/midi/ADIG02.mid'
+
+    print(EventSeq.dim())
 
     print('Converting MIDI to EventSeq')
     es = EventSeq.from_note_seq(NoteSeq.from_midi_file(path))
-    print(EventSeq.dim())
-    print(len(es.to_array()))
 
     print('Converting EventSeq to MIDI')
-    EventSeq.from_array(es.to_array()).to_note_seq().to_midi_file('./test.mid')
+    print(NoteSeq.from_midi_file(path).notes)
+    print(EventSeq.from_array(es.to_array()).to_note_seq().notes)
+    # assert NoteSeq.from_midi_file(path).notes == EventSeq.from_array(es.to_array()).to_note_seq().notes
+    EventSeq.from_array(es.to_array()).to_note_seq().to_midi_file('test.mid')
 
-    print('Converting EventSeq to ControlSeq')
-    cs = ControlSeq.from_event_seq(es)
-
-    print('Saving compressed ControlSeq')
-    pickle.dump(cs.to_compressed_array(), open('./tmp/cs-compressed.data', 'wb'))
-    print(cs.to_compressed_array())
-    print('Loading compressed ControlSeq')
-    c = ControlSeq.recover_compressed_array(pickle.load(open('./tmp/cs-compressed.data', 'rb')))
-    print(c)
-
-    print('Done')
+    # assert (es.to_array() == EventSeq.from_array(es.to_array()).to_array()).all()
+    #
+    # new_es = EventSeq.from_note_seq(NoteSeq.from_midi_file('test.mid'))
+    #
+    # # assert new_es.to_array() == es.to_array()
+    #
+    # print('Converting EventSeq to ControlSeq')
+    # cs = ControlSeq.from_event_seq(es)
+    #
+    # print('Saving compressed ControlSeq')
+    # pickle.dump(cs.to_compressed_array(), open('/tmp/cs-compressed.data', 'wb'))
+    #
+    # print('Loading compressed ControlSeq')
+    # c = ControlSeq.recover_compressed_array(pickle.load(open('/tmp/cs-compressed.data', 'rb')))
+    #
+    # print('Done')
