@@ -4,7 +4,9 @@
 - [paper link](https://arxiv.org/abs/1809.04281) 
 - [paper review](https://github.com/SSUHan/PaparReviews/issues/13)
 
+## Abstract
 
+1. This Repository is perfectly cometible with **tensorflow 2.0**
 
 ## Preprocessing
 
