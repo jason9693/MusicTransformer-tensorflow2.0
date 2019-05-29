@@ -1,28 +1,31 @@
-from model import MusicTransformerV2
+from model import MusicTransformer
 from custom.layers import *
+from custom import callback
 from tensorflow.python import keras
+import params as par
 from tensorflow.python import enable_eager_execution
+from tensorflow.python.keras.optimizer_v2.adam import Adam
+from data import Data
+import utils
 enable_eager_execution()
 
 tf.executing_eagerly()
 
 if __name__ == '__main__':
-    # print(tf.TensorShape(None).dims)
-    # model = MusicTransformer()
-    # optimizer = keras.optimizers.Adam(lr=par.l_r)
-    # model.compile(optimizer=optimizer, loss=par.loss_type)
-    #
-    # x= np.zeros(shape=[par.batch_size, par.max_seq])
-    # y = np.ones(shape=[par.batch_size], dtype=np.int)
-    #
-    # # print(model.summary())
-    # start_time = time.time()
-    # model.train_on_batch(x=x,y=model.processed_y(y))
-    # #model.build(input_shape=x.shape[1:])
-    # end_time = time.time()
-    #
-    # print(model.summary())
-    # print('update per time: {}'.format(end_time-start_time))
-    mt = MusicTransformerV2()
-    print(mt.model.summary())
-    print(mt.model.compile(optimizer=keras.optimizers.Adam(0.001), loss='categorical_crossentropy', metrics=['accuracy']))
+    epoch = 100
+    batch = 1000
+
+    dataset = Data('dataset/processed/')
+    opt = Adam(par.l_r)
+    mt = MusicTransformer(
+        embedding_dim=256, vocab_size=388 + 2, num_layer=6,
+        max_seq=2048, debug=False
+    )
+    mt.compile(optimizer=opt, loss=callback.TransformerLoss())
+
+    for e in range(epoch):
+        for b in range(batch):
+            batch_x, batch_y = dataset.seq2seq_batch(3, par.max_seq)
+            result_metrics = mt.train_on_batch(batch_x, batch_y)
+            print('Loss: {:6.6}, Accuracy: {:3.2}'.format(result_metrics[0], result_metrics[1]))
+

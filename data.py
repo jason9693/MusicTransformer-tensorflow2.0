@@ -24,7 +24,13 @@ class Data:
             self._get_seq(file, length)
             for file in batch_files
         ]
-        return batch_data
+        return np.array(batch_data)  # batch_size, seq_len
+
+    def seq2seq_batch(self, batch_size, length):
+        data = self.batch(batch_size, length * 2)
+        x = data[:, :length]
+        y = data[:, length:]
+        return x, y
 
     def random_sequential_batch(self, batch_size, length):
         batch_files = random.sample(self.files, k=batch_size)
@@ -80,7 +86,7 @@ class PositionalY:
 
 
 class DataSequence(keras.utils.Sequence):
-    def __init__(self, path, batch_size, seq_len, vocab_size=sequence.EventSeq.dim()):
+    def __init__(self, path, batch_size, seq_len, vocab_size=sequence.EventSeq.dim()+2):
         self.data = Data(path)
         self.batch_size = batch_size
         self.file_idx = 0
@@ -111,8 +117,6 @@ class DataSequence(keras.utils.Sequence):
             return self.__getitem__(idx)
 
         return np.array(x), np.eye(self.vocab_size)[np.array(y)]
-
-
 
 
 if __name__ == '__main__':

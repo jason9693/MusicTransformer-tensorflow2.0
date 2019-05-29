@@ -4,6 +4,7 @@ from sequence import EventSeq, ControlSeq
 import tensorflow as tf
 import params as par
 
+
 def find_files_by_extensions(root, exts=[]):
     def _has_ext(name):
         if not exts:
@@ -86,22 +87,25 @@ def compute_gradient_norm(parameters, norm_type=2):
     return total_norm
 
 
-def get_masked_with_pad_tensor(size, src, trg=None):
+def get_masked_with_pad_tensor(size, src, trg):
     """
     :param size: the size of input
     :param src: source tensor
     :param trg: target tensor
     :return:
     """
+    src = tf.cast(src[:,tf.newaxis,tf.newaxis,:], tf.int32)
+    trg = tf.cast(trg[:, tf.newaxis,tf.newaxis,:], tf.int32)
     src_pad_tensor = tf.ones_like(src) * par.pad_token
-    src_mask = tf.cast(tf.not_equal(src, src_pad_tensor), dtype=tf.int32)
+    src_mask = tf.cast(tf.equal(src, src_pad_tensor), dtype=tf.int32)
     if trg is not None:
         trg_pad_tensor = tf.ones_like(trg) * par.pad_token
-        trg_mask = tf.cast(tf.not_equal(trg, trg_pad_tensor), dtype=tf.int32)
-
+        trg_mask = tf.cast(tf.equal(trg, trg_pad_tensor), dtype=tf.int32)
         # boolean reversing i.e) True * -1 + 1 = False
-        seq_mask = tf.sequence_mask(range(1, size+1), size, dtype=tf.int32) * -1 + 1
-        trg_mask = tf.cast(tf.equal(trg_mask, seq_mask), dtype=tf.int32)
+        seq_mask = tf.sequence_mask(list(range(1, size+1)), size, dtype=tf.int32) * -1 + 1
+        # seq_mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)
+        # seq_mask = tf.cast(seq_mask, tf.int32)
+        trg_mask = tf.cast(tf.maximum(trg_mask, seq_mask), dtype=tf.int32)
     else:
         trg_mask = None
 
@@ -118,9 +122,22 @@ def get_mask_tensor(size):
     return seq_mask
 
 
-def fill_with_placeholder(prev_data: list, max_len: int, fill_val: float=0):
+def fill_with_placeholder(prev_data: list, max_len: int, fill_val: float=par.pad_token):
     placeholder = [fill_val for _ in range(max_len - len(prev_data))]
     return prev_data + placeholder
+
+
+def pad_with_length(max_length: int, seq: list, pad_val: float=par.pad_token):
+    """
+    :param max_length: max length of token
+    :param seq: token list with shape:(length, dim)
+    :param pad_val: padding value
+    :return:
+    """
+    pad_length = max(max_length - len(seq), 0)
+    pad = [pad_val] * pad_length
+    return seq + pad
+
 
 # if __name__ == '__main__':
 #
