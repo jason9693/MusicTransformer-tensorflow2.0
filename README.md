@@ -43,7 +43,3 @@ tf-2.0alpha currently not supported **keras.optimizers** as **version 2.** so, y
   > from tensorflow.python.keras.optimizer_v2.adam import Adam
   > optimizer = Adam(0.0001)
   ```
-
-```python
-from tensorflow.python.keras.optimizer_v2.adam import Adam
-```
