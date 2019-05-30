@@ -77,16 +77,17 @@ class RelativeGlobalAttention(keras.layers.Layer):
         self.h = h
         self.d = d
         self.dh = d // h
-        self.Wq = self.add_variable("Wq", shape=[int(self.d), int(self.d)])
-        self.Wk = self.add_variable("Wk", shape=[int(self.d), int(self.d)])
-        self.Wv = self.add_variable("Wv", shape=[int(self.d), int(self.d)])
+        self.Wq = keras.layers.Dense(int(self.d/2))
+        self.Wk = keras.layers.Dense(int(self.d/2))
+        self.Wv = keras.layers.Dense(int(self.d))
+        self.fc = keras.layers.Dense(d)
 
     def build(self, input_shape):
         shape_q = input_shape[0][1]
         shape_k = input_shape[1][1]
         self.len_k = input_shape[1][1]
         self.max_seq = max(input_shape[0][1], input_shape[1][1], input_shape[2][1])
-        self.E = self.add_variable('emb', shape=[min(shape_q, shape_k), int(self.dh)])
+        self.E = self.add_variable('emb', shape=[min(shape_q, shape_k), int(self.dh/2)])
         # self.E = tf.pad(self.E, [[self.max_seq - self.E.shape[0], 0], [0, 0]])
         # print(self.E)
 
@@ -99,27 +100,23 @@ class RelativeGlobalAttention(keras.layers.Layer):
         """
 
         q = inputs[0]
-        # q = tf.pad(q, [[0, 0], [0, max(0, self.max_seq-q.shape[1])], [0, 0]])
-        q = tf.tensordot(q, self.Wq, [[2], [0]])
+        q = self.Wq(q)
         q = tf.reshape(q, (q.shape[0], q.shape[1], self.h, -1))
         q = tf.transpose(q, (0, 2, 1, 3))  # batch, h, seq, dh
 
         k = inputs[1]
-        # k = tf.pad(k, [[0, 0], [0, max(0, self.max_seq - k.shape[1])], [0, 0]])
-        k = tf.tensordot(k, self.Wk, [[2], [0]])
+        k = self.Wk(k)
         k = tf.reshape(k, (k.shape[0], k.shape[1], self.h, -1))
         k = tf.transpose(k, (0, 2, 1, 3))
 
         v = inputs[2]
-        # v = tf.pad(v, [[0, 0], [0, max(0, self.max_seq - v.shape[1])], [0, 0]])
-        v = tf.tensordot(v, self.Wv, [[2],[0]])
+        v = self.Wv(v)
         v = tf.reshape(v, (v.shape[0], v.shape[1], self.h, -1))
         v = tf.transpose(v, (0, 2, 1, 3))
 
         E = self.E
-        E = tf.transpose(E,[1,0])
+        QE = tf.einsum('bhld,md->bhlm', q, E)
 
-        QE = tf.tensordot(q, E, [[-1],[0]])
         Srel = self._skewing(QE)
         Kt = tf.transpose(k,[0, 1, 3, 2])
         QKt = tf.matmul(q, Kt)
@@ -133,15 +130,14 @@ class RelativeGlobalAttention(keras.layers.Layer):
 
         out = tf.transpose(attention, (0, 2, 1, 3))
         out = tf.reshape(out, (-1, self.max_seq, self.d))
+
+        out = self.fc(out)
         return out
 
     def _skewing(self, tensor: tf.Tensor):
         padded = tf.pad(tensor, [[0, 0], [0,0], [0, 0], [1, 0]])
-        # print('padded:\n{}'.format(padded))
         reshaped = tf.reshape(padded, shape=[-1, padded.shape[1], padded.shape[-1], padded.shape[-2]])
-        # print('reshaped:\n{}'.format(reshaped.shape))
-        Srel = tf.slice(reshaped, [0, 0, 1, 0], [-1, -1, -1, -1])
-        # print('S rel:\n{}'.format(Srel.shape))
+        Srel = reshaped[:, :, 1:, :]
         return Srel
 
 
@@ -161,8 +157,8 @@ class EncoderLayer(keras.layers.Layer):
         self.d_model = d_model
         self.rga = RelativeGlobalAttention(h=h, d=d_model)
 
-        self.FFN_pre = keras.layers.Conv1D(512, 1, activation=tf.nn.relu)
-        self.FFN_suf = keras.layers.Conv1D(self.d_model, 1)
+        self.FFN_pre = keras.layers.Dense(512, activation=tf.nn.relu)
+        self.FFN_suf = keras.layers.Dense(self.d_model)
 
         self.layernorm1 = keras.layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = keras.layers.LayerNormalization(epsilon=1e-6)
@@ -191,8 +187,8 @@ class DecoderLayer(keras.layers.Layer):
         self.rga = RelativeGlobalAttention(d=d_model, h=h)
         self.rga2 = RelativeGlobalAttention(d=d_model, h=h)
 
-        self.FFN_pre = keras.layers.Conv1D(512, 1, activation=tf.nn.relu)
-        self.FFN_suf = keras.layers.Conv1D(self.d_model, 1)
+        self.FFN_pre = keras.layers.Dense(512, activation=tf.nn.relu)
+        self.FFN_suf = keras.layers.Dense(self.d_model)
 
         self.layernorm1 = keras.layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = keras.layers.LayerNormalization(epsilon=1e-6)
@@ -202,13 +198,13 @@ class DecoderLayer(keras.layers.Layer):
         self.dropout2 = keras.layers.Dropout(rate)
         self.dropout3 = keras.layers.Dropout(rate)
 
-    def call(self, x, encode_out, src_mask=None, trg_mask=None, training=False, **kwargs):
+    def call(self, x, encode_out, mask=None, lookup_mask=None, training=False, **kwargs):
 
-        attn_out = self.rga([x, x, x], mask=trg_mask)
+        attn_out = self.rga([x, x, x], mask=lookup_mask)
         attn_out = self.dropout1(attn_out)
         out1 = self.layernorm1(attn_out+x)
 
-        attn_out2 = self.rga2([out1, encode_out, encode_out], mask=src_mask)
+        attn_out2 = self.rga2([out1, encode_out, encode_out], mask=mask)
         attn_out2 = self.dropout2(attn_out2)
         attn_out2 = self.layernorm2(out1+attn_out2)
 
@@ -235,7 +231,6 @@ class Encoder(keras.layers.Layer):
 
         self.enc_layers = [EncoderLayer(d_model, rate, h=4)
                            for _ in range(num_layers)]
-
         self.dropout = keras.layers.Dropout(rate)
 
     def call(self, x, mask=None, training=False):
@@ -243,6 +238,7 @@ class Encoder(keras.layers.Layer):
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
+        x = self.dropout(x, training=training)
 
         for i in range(self.num_layers):
             x = self.enc_layers[i](x, mask, training=training)
@@ -264,14 +260,14 @@ class Decoder(keras.layers.Layer):
                            for _ in range(num_layers)]
         self.dropout = keras.layers.Dropout(rate)
 
-    def call(self, x, enc_output, src_mask, trg_mask, training):
+    def call(self, x, enc_output, mask, lookup_mask, training):
         # adding embedding and position encoding.
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
-
+        x = self.dropout(x, training=training)
         for i in range(self.num_layers):
-            x = self.dec_layers[i](x, enc_output, src_mask=src_mask, trg_mask=trg_mask, training=training)
+            x = self.dec_layers[i](x, enc_output, lookup_mask=lookup_mask, mask=mask, training=training)
         return x  # (batch_size, input_seq_len, d_model)
 
 

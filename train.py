@@ -18,8 +18,8 @@ if __name__ == '__main__':
     dataset = Data('dataset/processed/')
     opt = Adam(par.l_r)
     mt = MusicTransformer(
-        embedding_dim=256, vocab_size=388 + 2, num_layer=6,
-        max_seq=2048, debug=False
+        embedding_dim=par.embedding_dim, vocab_size=par.vocab_size, num_layer=6,
+        max_seq=par.max_seq, debug=False
     )
     mt.compile(optimizer=opt, loss=callback.TransformerLoss())
 

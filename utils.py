@@ -3,6 +3,7 @@ import numpy as np
 from sequence import EventSeq, ControlSeq
 import tensorflow as tf
 import params as par
+import params as par
 
 
 def find_files_by_extensions(root, exts=[]):
@@ -105,11 +106,12 @@ def get_masked_with_pad_tensor(size, src, trg):
         seq_mask = tf.sequence_mask(list(range(1, size+1)), size, dtype=tf.int32) * -1 + 1
         # seq_mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)
         # seq_mask = tf.cast(seq_mask, tf.int32)
-        trg_mask = tf.cast(tf.maximum(trg_mask, seq_mask), dtype=tf.int32)
+        look_ahead_mask = tf.cast(tf.maximum(trg_mask, seq_mask), dtype=tf.int32)
     else:
         trg_mask = None
+        look_ahead_mask = None
 
-    return src_mask, trg_mask
+    return src_mask, trg_mask, look_ahead_mask
 
 
 def get_mask_tensor(size):
@@ -137,6 +139,13 @@ def pad_with_length(max_length: int, seq: list, pad_val: float=par.pad_token):
     pad_length = max(max_length - len(seq), 0)
     pad = [pad_val] * pad_length
     return seq + pad
+
+
+def append_token(data: tf.Tensor):
+    start_token = tf.ones((data.shape[0], 1), dtype=data.dtype) * par.token_sos
+    end_token = tf.ones((data.shape[0], 1), dtype=data.dtype) * par.token_eos
+
+    return tf.concat([start_token, data, end_token], -1)
 
 
 # if __name__ == '__main__':

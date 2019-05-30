@@ -32,6 +32,12 @@ class Data:
         y = data[:, length:]
         return x, y
 
+    def slide_seq2seq_batch(self, batch_size, length):
+        data = self.batch(batch_size, length+1)
+        x = data[:, :-1]
+        y = data[:, 1:]
+        return x, y
+
     def random_sequential_batch(self, batch_size, length):
         batch_files = random.sample(self.files, k=batch_size)
         batch_data = []

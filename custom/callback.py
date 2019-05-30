@@ -26,7 +26,7 @@ class TransformerLoss(keras.losses.SparseCategoricalCrossentropy):
             from_logits=True, reduction='none')
         _loss = loss_object(y_true, y_pred)
         _loss *= mask
-        return tf.reduce_mean(tf.reduce_mean(_loss))
+        return tf.reduce_mean(_loss)
 
 
 if __name__ == '__main__':
