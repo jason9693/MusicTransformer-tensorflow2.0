@@ -4,5 +4,5 @@ data
 *.midi
 *.MID
 *.pickle
-__pycache__
+*__pycache__
 *.idea
