@@ -12,11 +12,32 @@
 
 * In this repository using single track method (2nd method in paper.).
 
-* If you want to implementation of method 1, see [here](https://github.com/COMP6248-Reproducability-Challenge/music-transformer-comp6248) .
+* If you want to get implementation of method 1, see [here](https://github.com/COMP6248-Reproducability-Challenge/music-transformer-comp6248) .
 
 * I refered preprocess code from [performaceRNN re-built repository.](https://github.com/djosix/Performance-RNN-PyTorch) 
 
+  * vocab size is smaller than paper.
+    1. note on : 21 ~ 109
+    2. note off : 21 ~ 109
+    3. velocity : 32
+    4. time shift : 32
+  
   ![](https://user-images.githubusercontent.com/11185336/51083282-cddfc300-175a-11e9-9341-4a9042b17c19.png)
+
+
+
+## Trainig
+
+## Hyper Parameter
+
+* learning rate : 0.0001
+* head size : 4
+* number of layers : 6
+* seqence length : 2048
+* embedding dim : 256 (dh = 256 / 4 = 64)
+* batch size : 3
+
+## Generate Music
 
 
 
@@ -24,7 +45,7 @@
 
 ### 1. tf.keras
 
- you can't use `tf.keras` directly in alpha ver. So you should import `from tensorflow.python import keras` ,then use `> keras.{methods}` 
+ you can't use `tf.keras` directly in alpha ver. So you should import `from tensorflow.python import keras` ,then use `> keras.{METHODS}` 
 
 * example : 
 
@@ -45,3 +66,10 @@ tf-2.0alpha currently not supported **keras.optimizers** as **version 2.** so, y
   > from tensorflow.python.keras.optimizer_v2.adam import Adam
   > optimizer = Adam(0.0001)
   ```
+
+
+
+### 3. Keras Model Subclassing
+
+current tf 2.0(alpha) , subclassed keras model can't use method **save(), summary(), fit()**
+
