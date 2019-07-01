@@ -11,8 +11,9 @@
 
 ## Contribution
 
-1. Domain: Dramatically reduces the memory footprint, allowing it to scale to musical sequences on the order of minutes.
-2. Algorithm: Reduced space complexity of Transformer from O(N^2D) to O(ND).
+* Domain: Dramatically reduces the memory footprint, allowing it to scale to musical sequences on the order of minutes.
+
+* Algorithm: Reduced space complexity of Transformer from O(N^2D) to O(ND).
 
 ## Preprocessing
 
@@ -48,15 +49,15 @@
 * mt.generate() can generate music automatically.
 
 ```python
-> from models import MusicTransformer
-> mt = MusicTransformer(
+from models import MusicTransformer
+mt = MusicTransformer(
   	embedding_dim=256, vocab_size=par.vocab_size, 
   	num_layer=6, 
   	max_seq=max_seq,
   	dropout=0.1,
   	debug=False
-	)
-> mt.generate(prior=[1,3,4,5], length=2048)
+)
+mt.generate(prior=[1,3,4,5], length=2048)
 ```
 
 
@@ -70,8 +71,8 @@
 * example : 
 
   ```python
-  > from tensorflow.python import keras 
-  > dropout = keras.layers.Dropout(0.3)
+  from tensorflow.python import keras 
+  dropout = keras.layers.Dropout(0.3)
   ```
 
 
@@ -83,8 +84,8 @@ tf-2.0alpha currently not supported **keras.optimizers** as **version 2.** so, y
 * example:
 
   ```python
-  > from tensorflow.python.keras.optimizer_v2.adam import Adam
-  > optimizer = Adam(0.0001)
+  from tensorflow.python.keras.optimizer_v2.adam import Adam
+  optimizer = Adam(0.0001)
   ```
 
 
