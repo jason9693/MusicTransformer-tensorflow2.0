@@ -838,7 +838,7 @@ class ControlSeq:
 if __name__ == '__main__':
     import pickle, sys
 
-    path = sys.argv[1] if len(sys.argv) > 1 else 'dataset/midi/ADIG01.mid'
+    path = sys.argv[1] if len(sys.argv) > 1 else 'dataset/sample/c_maj.mid'
 
     print(EventSeq.dim())
 
@@ -846,7 +846,8 @@ if __name__ == '__main__':
     es = EventSeq.from_note_seq(NoteSeq.from_midi_file(path))
 
     print('Converting EventSeq to MIDI')
-    EventSeq.from_array([]).to_note_seq().to_midi_file('test.mid')
+    EventSeq.from_array(es.to_array()[:30]).to_note_seq().to_midi_file('test.mid')
+    print(list(es.to_array()[:30]))
 
     # print('Converting EventSeq to ControlSeq')
     # cs = ControlSeq.from_event_seq(es)

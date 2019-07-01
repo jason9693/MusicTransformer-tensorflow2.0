@@ -3,7 +3,6 @@ import numpy as np
 from sequence import EventSeq, ControlSeq
 import tensorflow as tf
 import params as par
-import params as par
 
 
 def find_files_by_extensions(root, exts=[]):

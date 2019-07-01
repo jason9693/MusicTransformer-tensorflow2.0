@@ -51,8 +51,8 @@ class PositionEmbeddingV2(keras.layers.Layer):
     def __init__(self, max_seq, embedding_dim, **kwargs):
         super(PositionEmbeddingV2, self).__init__(**kwargs)
         angle_rads = PositionEmbeddingV2.__get_angles(np.arange(max_seq)[:, np.newaxis],
-                                np.arange(embedding_dim)[np.newaxis, :],
-                                embedding_dim)
+                                                      np.arange(embedding_dim)[np.newaxis, :],
+                                                      embedding_dim)
 
         # apply sin to even indices in the array; 2i
         sines = np.sin(angle_rads[:, 0::2])
@@ -76,25 +76,43 @@ class PositionEmbeddingV2(keras.layers.Layer):
 
 
 class DynamicPositionEmbedding(keras.layers.Layer):
-    def __init__(self, embedding_dim, **kwargs):
+    def __init__(self, embedding_dim, max_seq=2048, **kwargs):
         super().__init__(**kwargs)
-        self.embedding_dim = embedding_dim
-
-    def build(self, input_shape):
-        self.embed_sinusoid_list = np.array([[
+        embed_sinusoid_list = np.array([[
             [
                 m.sin(
-                    pos * m.exp(-m.log(10000) * i / self.embedding_dim) * m.exp(
-                        m.log(10000) / self.embedding_dim * (i % 2)) + 0.5 * m.pi * (i % 2)
+                    pos * m.exp(-m.log(10000) * i/embedding_dim) *
+                    m.exp(m.log(10000)/embedding_dim * (i % 2)) + 0.5 * m.pi * (i % 2)
                 )
-                for i in range(self.embedding_dim)
+                for i in range(embedding_dim)
             ]
-            for pos in range(input_shape[1])
+            for pos in range(max_seq)
         ]])
-        self.positional_embedding = tf.constant(self.embed_sinusoid_list, dtype=tf.float32)
+        self.positional_embedding = tf.constant(embed_sinusoid_list, dtype=tf.float32)
 
     def call(self, inputs, **kwargs):
-        return tf.add(inputs, self.positional_embedding)
+        return tf.add(inputs, self.positional_embedding[:,:inputs.shape[1],:])
+
+# class DynamicPositionEmbedding(keras.layers.Layer):
+#     def __init__(self, embedding_dim, **kwargs):
+#         super().__init__(**kwargs)
+#         self.embedding_dim = embedding_dim
+#
+#     def build(self, input_shape):
+#         self.embed_sinusoid_list = np.array([[
+#             [
+#                 m.sin(
+#                     pos * m.exp(-m.log(10000) * i / self.embedding_dim) * m.exp(
+#                         m.log(10000) / self.embedding_dim * (i % 2)) + 0.5 * m.pi * (i % 2)
+#                 )
+#                 for i in range(self.embedding_dim)
+#             ]
+#             for pos in range(input_shape[1])
+#         ]])
+#         self.positional_embedding = tf.constant(self.embed_sinusoid_list, dtype=tf.float32)
+#
+#     def call(self, inputs, **kwargs):
+#         return tf.add(inputs, self.positional_embedding)
 
 
 class BaselineAttention(keras.layers.Layer):
@@ -220,12 +238,16 @@ class RelativeGlobalAttention(keras.layers.Layer):
         Kt = tf.transpose(k,[0, 1, 3, 2])
         QKt = tf.matmul(q, Kt)
         logits = QKt + Srel
+        logits = logits / math.sqrt(self.dh)
 
         if mask is not None:
             logits += (tf.cast(mask, tf.float32) * -1e9)
 
-        attention = tf.nn.softmax(logits, -1) / math.sqrt(self.dh)
+        attention = tf.nn.softmax(logits, -1)
+        # tf.print('logit result: \n', logits, output_stream=sys.stdout)
+
         attention = tf.matmul(attention, v)
+        # tf.print('attention result: \n', attention, output_stream=sys.stdout)
 
         out = tf.transpose(attention, (0, 2, 1, 3))
         out = tf.reshape(out, (out.shape[0], -1, self.d))
@@ -326,6 +348,7 @@ class DecoderLayer(keras.layers.Layer):
         self.dropout3 = keras.layers.Dropout(rate)
 
     def call(self, x, encode_out, mask=None, lookup_mask=None, training=False, **kwargs):
+
         attn_out = self.rga([x, x, x], mask=lookup_mask)
         attn_out = self.dropout1(attn_out, training=training)
         out1 = self.layernorm1(attn_out+x)
@@ -352,7 +375,7 @@ class Encoder(keras.layers.Layer):
         # if max_len is not None:
         #     self.pos_encoding = PositionEmbedding(max_seq=max_len, embedding_dim=self.d_model)
         if True:
-            self.pos_encoding = DynamicPositionEmbedding(self.d_model)
+            self.pos_encoding = DynamicPositionEmbedding(self.d_model, max_seq=max_len)
 
         self.enc_layers = [EncoderLayer(d_model, rate, h=self.d_model // 64, additional=False, max_seq=max_len)
                            for i in range(num_layers)]
@@ -380,7 +403,7 @@ class Decoder(keras.layers.Layer):
         # if max_len is not None:
         #     self.pos_encoding = PositionEmbedding(max_seq=max_len, embedding_dim=self.d_model)
         if True:
-            self.pos_encoding = DynamicPositionEmbedding(self.d_model)
+            self.pos_encoding = DynamicPositionEmbedding(self.d_model, max_seq=max_len)
 
         self.dec_layers = [DecoderLayer(d_model, rate, h=self.d_model // 64, additional=False, max_seq=max_len)
                            for i in range(num_layers)]
@@ -407,6 +430,7 @@ if __name__ == '__main__':
             [[1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1]],
             [[1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1]]],
             dtype=tf.float32)
+
     import utils
 
     src_mask, trg_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(q.shape[1], tf.argmax(k,-1), tf.argmax(q, -1))
@@ -484,7 +508,7 @@ if __name__ == '__main__':
         q,
         k,
         k
-    ], mask=trg_mask)
+    ], mask=look_ahead_mask)
 
     print(result)
 

@@ -11,13 +11,17 @@ enable_eager_execution()
 
 class MusicTransformer(keras.Model):
     def __init__(self, embedding_dim=256, vocab_size=388+2, num_layer=6,
-                 max_seq=2048, dropout=0.1, debug=False):
+                 max_seq=2048, dropout=0.1, debug=False, loader_path=None):
         super(MusicTransformer, self).__init__()
         self._debug = debug
         self.max_seq = max_seq
         self.num_layer = num_layer
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
+
+        # if loader_path:
+        #     self.__load(loader_path)
+
         self.Encoder = Encoder(
             d_model=self.embedding_dim, input_vocab_size=self.vocab_size,
             num_layers=self.num_layer, rate=dropout, max_len=max_seq)
@@ -32,6 +36,17 @@ class MusicTransformer(keras.Model):
     def _set_metrics(self):
         accuracy = keras.metrics.SparseCategoricalAccuracy()
         self.custom_metrics = [accuracy]
+
+    # TODO : loader 작성
+    def __load(self, dir_path):
+        pass
+
+    def __load_config_from_json(self, config):
+        self._debug = config['debug']
+        self.max_seq = config['max_seq']
+        self.num_layer = config['num_layer']
+        self.embedding_dim = config['embedding_dim']
+        self.vocab_size = config['vocab_size']
 
     @staticmethod
     def __prepare_data(x ,y):
@@ -99,9 +114,6 @@ class MusicTransformer(keras.Model):
             loss = self.loss(out_tar, predictions)
         gradients = tape.gradient(loss, self.trainable_variables)
         self.grad = gradients
-        # if self._debug:
-        #     tf.print(predictions, output_stream=sys.stdout)
-        # tf.print(self.grad, output_stream=sys.stdout)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
         return predictions
@@ -148,24 +160,16 @@ class MusicTransformer(keras.Model):
         else:
             return tf.argmax(predictions, -1)
 
-    def load_weights(self, filepath, by_name=False):
-        ckpt = tf.train.Checkpoint(transformer=self)
-        ckpt_manager = tf.train.CheckpointManager(ckpt, filepath, max_to_keep=5)
-        if ckpt_manager.latest_checkpoint:
-            ckpt.restore(ckpt_manager.latest_checkpoint)
-            print('Latest checkpoint restored!!')
+    def get_config(self):
+        config = {}
+        config['debug'] = self._debug
+        config['max_seq'] = self.max_seq
+        config['num_layer'] = self.num_layer
+        config['embedding_dim'] = self.embedding_dim
+        config['vocab_size'] = self.vocab_size
+        return config
 
-    def save_weights(self, filepath, overwrite=True, save_format=None, optimizer=None):
-        ckpt = tf.train.Checkpoint(transformer=self, optimizer=optimizer)
-        ckpt_manager = tf.train.CheckpointManager(ckpt, filepath, max_to_keep=5)
-        if ckpt_manager.latest_checkpoint:
-            ckpt.restore(ckpt_manager.latest_checkpoint)
-            print('Latest checkpoint restored!!')
-
-        ckpt_manager.save()
-        # TODO 모델 다루기 정리하기
-
-    def generate(self, prior: list, mode=None):
+    def generate(self, prior: list, mode=None, length = 2048):
         prior = tf.constant([prior])
 
         decode_array = [par.token_sos]
@@ -176,9 +180,9 @@ class MusicTransformer(keras.Model):
         if mode == 'beam':
             pass
         else:
-            for i in range(self.max_seq):
+            for i in range(min(self.max_seq, length)):
                 if i % 100 == 0:
-                    print('generating... {}% completed'.format((i/self.max_seq)*100))
+                    print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
                 # print(decode_array)
                 enc_mask, tar_mask, look_ahead_mask = \
                     utils.get_masked_with_pad_tensor(decode_array.shape[1], prior, decode_array)
@@ -198,6 +202,7 @@ class MusicTransformer(keras.Model):
 
 if __name__ == '__main__':
     import utils
+    import json
     from custom import callback
     print(tf.executing_eagerly())
 
@@ -207,6 +212,9 @@ if __name__ == '__main__':
     print(lookup_mask)
     # print(src_mask, trg_mask)
     mt = MusicTransformer(debug=True, embedding_dim=par.embedding_dim, vocab_size=par.vocab_size)
+    mt.save_weights('my_model.h5', save_format='h5')
+    mt.load_weights('my_model.h5')
+    # print(mt.to_json())
 
     # print('compile...')
     # mt.compile(optimizer='adam', loss=callback.TransformerLoss(debug=True))
@@ -215,15 +223,8 @@ if __name__ == '__main__':
     # print('start training...')
     # for i in range(2):
     #     mt.train_on_batch(x=src, y=trg)
-    mt.generate([27, 186,  43, 213, 115, 131])
-    # print(mt.grad)
-    # mt.fit(x=src, y=trg)
-    # result = mt(
-    #     src,
-    #     targets=trg,
-    #     trg_mask=trg_mask,
-    #     src_mask=src_mask,
-    # )
-    # print(mt.summary())
-    #mt.model.fit(x=np.ones(shape=[10, 2049]), y=)
+    result = mt.generate([27, 186,  43, 213, 115, 131], length=100)
+    print(result)
+    import sequence
+    sequence.EventSeq.from_array(result[0]).to_note_seq().to_midi_file('result.midi')
     pass
