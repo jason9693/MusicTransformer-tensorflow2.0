@@ -4,14 +4,14 @@ import numpy as np
 import params as par
 import utils
 import sys
-from tensorflow.python import keras, enable_eager_execution
+from tensorflow.python import keras
 tf.executing_eagerly()
-enable_eager_execution()
 
 
 class MusicTransformer(keras.Model):
+
     def __init__(self, embedding_dim=256, vocab_size=388+2, num_layer=6,
-                 max_seq=2048, dropout=0.1, debug=False, loader_path=None):
+                 max_seq=2048, dropout=0.1, debug=False, loader_path=None, strategy=tf.distribute.MirroredStrategy):
         super(MusicTransformer, self).__init__()
         self._debug = debug
         self.max_seq = max_seq
@@ -19,17 +19,14 @@ class MusicTransformer(keras.Model):
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
 
-        # if loader_path:
-        #     self.__load(loader_path)
-
         self.Encoder = Encoder(
             d_model=self.embedding_dim, input_vocab_size=self.vocab_size,
             num_layers=self.num_layer, rate=dropout, max_len=max_seq)
         self.Decoder = Decoder(
             num_layers=self.num_layer, d_model=self.embedding_dim,
             input_vocab_size=self.vocab_size, rate=dropout, max_len=max_seq)
-        self.drop = keras.layers.Dropout(dropout)
         self.fc = keras.layers.Dense(vocab_size, activation=tf.nn.softmax, name='output')
+        # TODO: loss 에 맞게 softmax 빼기
 
         self._set_metrics()
 
@@ -37,9 +34,9 @@ class MusicTransformer(keras.Model):
         accuracy = keras.metrics.SparseCategoricalAccuracy()
         self.custom_metrics = [accuracy]
 
-    # TODO : loader 작성
-    def __load(self, dir_path):
-        pass
+    # # TODO : loader 작성
+    # def __load(self, dir_path):
+    #     pass
 
     def __load_config_from_json(self, config):
         self._debug = config['debug']
@@ -74,12 +71,6 @@ class MusicTransformer(keras.Model):
         decoder = self.Decoder(targets, enc_output=encoder, training=training, lookup_mask=lookup_mask, mask=trg_mask)
         # out = self.drop(decoder)
         fc = self.fc(decoder)
-
-        # if self._debug:
-        #     tf.print('before fc: \n', decoder, output_stream=sys.stdout)
-        #     tf.print('after fc: \n', fc, output_stream=sys.stdout)
-        # if self._debug:
-        #     tf.print(fc, output_stream=sys.stdout)
         return fc
 
     def train_on_batch(self, x, y=None, sample_weight=None, class_weight=None, reset_metrics=True):
@@ -91,28 +82,38 @@ class MusicTransformer(keras.Model):
 
         enc_mask, tar_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(self.max_seq, x, dec_input)
 
-        predictions = self.__train_step(x, dec_input, target, enc_mask, tar_mask, look_ahead_mask, True)
+        # predictions = self.__train_step(x, dec_input, target, enc_mask, tar_mask, look_ahead_mask, True)
+        predictions = self.__dist_train_step(
+            x, dec_input, target, enc_mask, tar_mask, look_ahead_mask, True)
+
         if self._debug:
             print('train step finished')
         result_metric = []
-        loss = tf.reduce_mean(self.loss(target, predictions))
+        # loss = tf.reduce_mean(self.loss(target, predictions))
+        # loss = self.loss(target, predictions)
+        loss = self._distribution_strategy.reduce(tf.distribute.ReduceOp.MEAN, self.loss_value, None)
+        loss = tf.reduce_mean(loss)
+        # loss = self._distribution_strategy.reduce(tf.distribute.ReduceOp.MEAN, loss, axis=-1)
         for metric in self.custom_metrics:
             result_metric.append(metric(target, predictions).numpy())
 
         return [loss.numpy()]+result_metric
 
-    @tf.function
+    # @tf.function
+    def __dist_train_step(self, inp, inp_tar, out_tar, enc_mask, tar_mask, lookup_mask, training):
+        return self._distribution_strategy.experimental_run_v2(
+            self.__train_step, args=(inp, inp_tar, out_tar, enc_mask, tar_mask, lookup_mask, training))
+
+    # @tf.function
     def __train_step(self, inp, inp_tar, out_tar, enc_mask, tar_mask, lookup_mask, training):
-        # if self._debug:
-        #     tf.print('train step...', output_stream=sys.stdout)
         with tf.GradientTape() as tape:
             predictions = self.call(
                 inp,
                 targets=inp_tar,
                 src_mask=enc_mask,
                 trg_mask=tar_mask, lookup_mask=lookup_mask, training=training)
-            loss = self.loss(out_tar, predictions)
-        gradients = tape.gradient(loss, self.trainable_variables)
+            self.loss_value = self.loss(out_tar, predictions)
+        gradients = tape.gradient(self.loss_value, self.trainable_variables)
         self.grad = gradients
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
@@ -137,6 +138,7 @@ class MusicTransformer(keras.Model):
         return [loss.numpy()] + result_metric
 
     def sanity_check(self, x, y, mode='v'):
+        # mode: v -> vector d -> dict
         x, inp_tar, out_tar = MusicTransformer.__prepare_data(x, y)
 
         enc_mask, tar_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(self.max_seq, x, inp_tar)

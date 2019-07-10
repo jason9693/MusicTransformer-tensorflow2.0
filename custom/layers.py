@@ -93,27 +93,6 @@ class DynamicPositionEmbedding(keras.layers.Layer):
     def call(self, inputs, **kwargs):
         return tf.add(inputs, self.positional_embedding[:,:inputs.shape[1],:])
 
-# class DynamicPositionEmbedding(keras.layers.Layer):
-#     def __init__(self, embedding_dim, **kwargs):
-#         super().__init__(**kwargs)
-#         self.embedding_dim = embedding_dim
-#
-#     def build(self, input_shape):
-#         self.embed_sinusoid_list = np.array([[
-#             [
-#                 m.sin(
-#                     pos * m.exp(-m.log(10000) * i / self.embedding_dim) * m.exp(
-#                         m.log(10000) / self.embedding_dim * (i % 2)) + 0.5 * m.pi * (i % 2)
-#                 )
-#                 for i in range(self.embedding_dim)
-#             ]
-#             for pos in range(input_shape[1])
-#         ]])
-#         self.positional_embedding = tf.constant(self.embed_sinusoid_list, dtype=tf.float32)
-#
-#     def call(self, inputs, **kwargs):
-#         return tf.add(inputs, self.positional_embedding)
-
 
 class BaselineAttention(keras.layers.Layer):
     def __init__(self, h, d, **kwargs):
@@ -158,11 +137,12 @@ class BaselineAttention(keras.layers.Layer):
         Kt = tf.transpose(k, [0, 1, 3, 2])
         QKt = tf.matmul(q, Kt)
         logits = QKt
+        logits = logits / math.sqrt(self.dh)
 
         if mask is not None:
             logits += (tf.cast(mask, tf.float32) * -1e9)
 
-        attention = tf.nn.softmax(logits, -1) / math.sqrt(self.dh)
+        attention = tf.nn.softmax(logits, -1)
         attention = tf.matmul(attention, v)
 
         out = tf.transpose(attention, (0, 2, 1, 3))
@@ -227,13 +207,13 @@ class RelativeGlobalAttention(keras.layers.Layer):
         self.len_k = k.shape[2]
         self.len_q = q.shape[2]
 
-        E = self.__get_left_embedding(self.len_q, self.len_k)
+        E = self._get_left_embedding(self.len_q, self.len_k)
         # print('E: {} Q: {}'.format(E.shape, q.shape))
         # print('len q, len k: {}, {}'.format(self.len_q, self.len_k))
         # print('max seq: {}'.format(self.max_seq))
         QE = tf.einsum('bhld,md->bhlm', q, E)
         # print(QE.shape)
-        Srel = self.__skewing(QE)
+        Srel = self._skewing(QE)
 
         Kt = tf.transpose(k,[0, 1, 3, 2])
         QKt = tf.matmul(q, Kt)
@@ -255,25 +235,12 @@ class RelativeGlobalAttention(keras.layers.Layer):
         out = self.fc(out)
         return out
 
-    def __get_left_embedding(self, len_q, len_k):
+    def _get_left_embedding(self, len_q, len_k):
         starting_point = max(0,self.max_seq-len_q)
         e = self.E[starting_point:,:]
-        # if len_q > len_k:
-        #     k_starting_point = len_q - len_k
-        #     e = self.E[k_starting_point:, :]
-        #     pad_tensor = tf.zeros((k_starting_point, e.shape[1]))
-        #     e = tf.concat([pad_tensor, e], 0)
-        #     pass
-        # elif len_k >= len_q:
-        #     # q_starting_point = len_k-len_q
-        #     # e = self.E[q_starting_point:,:]
-        #     # pad_tensor = tf.zeros((q_starting_point, e.shape[1]))
-        #     # e = tf.concat([e, pad_tensor], 0)
-        #     pass
-        # print('E: \n{}'.format(e))
         return e
 
-    def __skewing(self, tensor: tf.Tensor):
+    def _skewing(self, tensor: tf.Tensor):
         padded = tf.pad(tensor, [[0, 0], [0,0], [0, 0], [1, 0]])
         reshaped = tf.reshape(padded, shape=[-1, padded.shape[1], padded.shape[-1], padded.shape[-2]])
         Srel = reshaped[:, :, 1:, :]
@@ -400,8 +367,6 @@ class Decoder(keras.layers.Layer):
         self.num_layers = num_layers
         self.embedding = keras.layers.Embedding(input_vocab_size, d_model)
 
-        # if max_len is not None:
-        #     self.pos_encoding = PositionEmbedding(max_seq=max_len, embedding_dim=self.d_model)
         if True:
             self.pos_encoding = DynamicPositionEmbedding(self.d_model, max_seq=max_len)
 
