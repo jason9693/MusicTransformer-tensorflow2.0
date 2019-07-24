@@ -8,16 +8,18 @@ import tensorflow as tf
 from sequence import NoteSeq, EventSeq, ControlSeq
 import utils
 import params as par
+from midi_processor.processor import encode_midi, decode_midi
 import config
 import random
 
 
 def preprocess_midi(path):
-    note_seq = NoteSeq.from_midi_file(path)
-    note_seq.adjust_time(-note_seq.notes[0].start)
-    event_seq = EventSeq.from_note_seq(note_seq)
-    control_seq = ControlSeq.from_event_seq(event_seq)
-    return event_seq.to_array(), control_seq.to_compressed_array()
+    return encode_midi(path)
+#     note_seq = NoteSeq.from_midi_file(path)
+#     note_seq.adjust_time(-note_seq.notes[0].start)
+#     event_seq = EventSeq.from_note_seq(note_seq)
+#     control_seq = ControlSeq.from_event_seq(event_seq)
+#     return event_seq.to_array(), control_seq.to_compressed_array()
 
 
 def preprocess_midi_files_under(midi_root, save_dir):
@@ -37,7 +39,7 @@ def preprocess_midi_files_under(midi_root, save_dir):
             print('EOF Error')
 
         with open('{}/{}.pickle'.format(save_dir,path.split('/')[-1]), 'wb') as f:
-            pickle.dump(data[0], f)
+            pickle.dump(data, f)
 
 
 class TFRecordsConverter(object):

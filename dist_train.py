@@ -6,6 +6,7 @@ from tensorflow.python.keras.optimizer_v2.adam import Adam
 from data import Data
 import utils
 import argparse
+import sys
 
 tf.executing_eagerly()
 
@@ -16,8 +17,8 @@ parser.add_argument('--batch_size', default=2, help='batch size')
 parser.add_argument('--pickle_dir', default='music', help='데이터셋 경로')
 parser.add_argument('--max_seq', default=2048, help='최대 길이')
 parser.add_argument('--epochs', default=100, help='에폭 수')
-parser.add_argument('--load_path', default="model/mt-0615", help='모델 로드 경로')
-parser.add_argument('--save_path', default="model/mt-0615", help='모델 저장 경로')
+parser.add_argument('--load_path', default="result/0722", help='모델 로드 경로')
+parser.add_argument('--save_path', default="result/0722", help='모델 저장 경로')
 parser.add_argument('--is_reuse', default=False)
 parser.add_argument('--multi_gpu', default=True)
 
@@ -43,7 +44,7 @@ print(dataset)
 
 # load model
 learning_rate = callback.CustomSchedule(par.embedding_dim)
-opt = Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
+opt = Adam(l_r, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 
 strategy = tf.distribute.MirroredStrategy()
 
@@ -55,8 +56,8 @@ with strategy.scope():
             vocab_size=par.vocab_size,
             num_layer=6,
             max_seq=max_seq,
-            dropout=0.1,
-            debug=False)
+            dropout=0.2,
+            debug=False, loader_path=load_path)
     mt.compile(optimizer=opt, loss=callback.transformer_dist_train_loss)
 
     # Train Start
@@ -71,10 +72,9 @@ with strategy.scope():
             if b % 100 == 0:
               eval_x, eval_y = dataset.seq2seq_batch(batch_size, max_seq, 'eval')
               eval_result_metrics = mt.evaluate(eval_x, eval_y)
-              mt.save_weights(save_path, save_format='tf')
-              mt.load_weights(save_path)
-              print(result_metrics)
+              mt.save(save_path)
               print('\n====================================================')
               print('Epoch/Batch: {}/{}'.format(e, b))
               print('Train >>>> Loss: {:6.6}, Accuracy: {}'.format(result_metrics[0], result_metrics[1]))
               print('Eval >>>> Loss: {:6.6}, Accuracy: {}'.format(eval_result_metrics[0], eval_result_metrics[1]))
+

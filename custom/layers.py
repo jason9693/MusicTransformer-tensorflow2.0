@@ -179,9 +179,6 @@ class RelativeGlobalAttention(keras.layers.Layer):
         # self.max_seq = max(input_shape[0][1], input_shape[1][1], input_shape[2][1])
         self.E = self.add_weight('emb', shape=[self.max_seq, int(self.dh // 2)])
 
-        # self.E = tf.pad(self.E, [[self.max_seq - self.E.shape[0], 0], [0, 0]])
-        # print(self.E)
-
     def call(self, inputs, mask=None, **kwargs):
         """
         :param inputs: a list of tensors. i.e) [Q, K, V]
@@ -208,9 +205,6 @@ class RelativeGlobalAttention(keras.layers.Layer):
         self.len_q = q.shape[2]
 
         E = self._get_left_embedding(self.len_q, self.len_k)
-        # print('E: {} Q: {}'.format(E.shape, q.shape))
-        # print('len q, len k: {}, {}'.format(self.len_q, self.len_k))
-        # print('max seq: {}'.format(self.max_seq))
         QE = tf.einsum('bhld,md->bhlm', q, E)
         # print(QE.shape)
         Srel = self._skewing(QE)
@@ -270,7 +264,6 @@ class EncoderLayer(keras.layers.Layer):
 
         self.d_model = d_model
         self.rga = RelativeGlobalAttention(h=h, d=d_model, add_emb=additional, max_seq=max_seq)
-        # self.rga = BaselineAttention(h=h, d=d_model)
 
         self.FFN_pre = keras.layers.Dense(512, activation=tf.nn.relu)
         self.FFN_suf = keras.layers.Dense(self.d_model)
@@ -300,8 +293,6 @@ class DecoderLayer(keras.layers.Layer):
         self.d_model = d_model
         self.rga = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
         self.rga2 = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
-        # self.rga = BaselineAttention(d=d_model, h=h)
-        # self.rga2 = BaselineAttention(d=d_model, h=h)
 
         self.FFN_pre = keras.layers.Dense(512, activation=tf.nn.relu)
         self.FFN_suf = keras.layers.Dense(self.d_model)
