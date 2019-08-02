@@ -4,7 +4,6 @@ import pickle
 from tensorflow.python import keras
 import numpy as np
 import params as par
-import sequence
 
 
 class Data:
@@ -36,6 +35,12 @@ class Data:
         data = self.batch(batch_size, length * 2, mode)
         x = data[:, :length]
         y = data[:, length:]
+        return x, y
+
+    def smallest_encoder_batch(self, batch_size, length, mode='train'):
+        data = self.batch(batch_size, length * 2, mode)
+        x = data[:, :length//100]
+        y = data[:, length//100:length//100+length]
         return x, y
 
     def slide_seq2seq_batch(self, batch_size, length, mode='train'):
@@ -100,39 +105,49 @@ class PositionalY:
         return '<Label located in {} position.>'.format(self.idx)
 
 
-class DataSequence(keras.utils.Sequence):
-    def __init__(self, path, batch_size, seq_len, vocab_size=sequence.EventSeq.dim()+2):
-        self.data = Data(path)
-        self.batch_size = batch_size
-        self.file_idx = 0
-        self.cache = []
-        self.vocab_size = vocab_size
-        self.seq_len = seq_len
-        pass
-
-    def _update_cache(self):
-        if self.file_idx < len(self.data.files)-1:
-            self.file_idx += 1
-        else:
-            self.file_idx = 0
-        seq = self.data._get_seq(self.data.files[self.file_idx])
-        self.cache = self._cut_data(seq)
-
-    def __len__(self):
-        return len(self.data.files)
-
-    def __getitem__(self, idx):
-        data_batch = self.data.batch(self.batch_size,self.seq_len + 1)
-        data_batch = np.array(data_batch)
-        try:
-            x = data_batch[:,:-1]
-            y = data_batch[:,1:]
-        except:
-            print('except')
-            return self.__getitem__(idx)
-
-        return np.array(x), np.eye(self.vocab_size)[np.array(y)]
-
+# class DataSequence(keras.utils.Sequence):
+#     def __init__(self, path, batch_size, seq_len, vocab_size=sequence.EventSeq.dim()+2):
+#         self.data = Data(path)
+#         self.batch_size = batch_size
+#         self.file_idx = 0
+#         self.cache = []
+#         self.vocab_size = vocab_size
+#         self.seq_len = seq_len
+#         pass
+#
+#     def _update_cache(self):
+#         if self.file_idx < len(self.data.files)-1:
+#             self.file_idx += 1
+#         else:
+#             self.file_idx = 0
+#         seq = self.data._get_seq(self.data.files[self.file_idx])
+#         self.cache = self._cut_data(seq)
+#
+#     def __len__(self):
+#         return len(self.data.files)
+#
+#     def __getitem__(self, idx):
+#         data_batch = self.data.batch(self.batch_size,self.seq_len + 1)
+#         data_batch = np.array(data_batch)
+#         try:
+#             x = data_batch[:,:-1]
+#             y = data_batch[:,1:]
+#         except:
+#             print('except')
+#             return self.__getitem__(idx)
+#
+#         return np.array(x), np.eye(self.vocab_size)[np.array(y)]
+#
+#
+# def add_noise(inputs: np.array, rate:float = 0.01): # input's dim is 2
+#     seq_length = np.shape(inputs)[-1]
+#
+#     num_mask = int(rate * seq_length)
+#     for inp in inputs:
+#         rand_idx = random.sample(range(seq_length), num_mask)
+#         inp[rand_idx] = par.pad_token
+#
+#     return inputs
 
 if __name__ == '__main__':
     import pprint
@@ -153,37 +168,34 @@ if __name__ == '__main__':
                     cnt_dict['index-'+str(index)] = 1
         return cnt_arr
 
+    # print(add_noise(np.array([[1,2,3,3,4,5,6]]), rate=0.2))
 
-    print(par.vocab_size)
-    data = Data('dataset/processed')
-    # ds = DataSequence('dataset/processed', 10, 2048)
-    sample = data.seq2seq_batch(1000, 100)[0]
-    pprint.pprint(list(sample))
-    arr = count_dict(par.vocab_size+3,sample)
-    pprint.pprint(
-        arr)
 
-    from sequence import EventSeq, Event
-
-    event_cnt = {
-        'note_on': 0,
-        'note_off': 0,
-        'velocity': 0,
-        'time_shift': 0
-    }
-    for event_index in range(len(arr)):
-        for event_type, feat_range in EventSeq.feat_ranges().items():
-
-            if feat_range.start <= event_index < feat_range.stop:
-                print(event_type+':'+str(arr[event_index])+' event cnt: '+str(event_cnt))
-                event_cnt[event_type] += arr[event_index]
-
-                # event_value = event_index - feat_range.start
-                # events.append(Event(event_type, time, event_value))
-                # if event_type == 'time_shift':
-                #     time += EventSeq.time_shift_bins[event_value]
-                # break
-    print(event_cnt)
+    # print(par.vocab_size)
+    # data = Data('dataset/processed')
+    # # ds = DataSequence('dataset/processed', 10, 2048)
+    # sample = data.seq2seq_batch(1000, 100)[0]
+    # pprint.pprint(list(sample))
+    # arr = count_dict(par.vocab_size+3,sample)
+    # pprint.pprint(
+    #     arr)
+    #
+    # from sequence import EventSeq, Event
+    #
+    # event_cnt = {
+    #     'note_on': 0,
+    #     'note_off': 0,
+    #     'velocity': 0,
+    #     'time_shift': 0
+    # }
+    # for event_index in range(len(arr)):
+    #     for event_type, feat_range in EventSeq.feat_ranges().items():
+    #
+    #         if feat_range.start <= event_index < feat_range.stop:
+    #             print(event_type+':'+str(arr[event_index])+' event cnt: '+str(event_cnt))
+    #             event_cnt[event_type] += arr[event_index]
+    #
+    # print(event_cnt)
 
     # print(np.max(sample), np.min(sample))
     # print([data._get_seq(file).shape for file in data.files])

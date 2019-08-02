@@ -95,7 +95,7 @@ class DynamicPositionEmbedding(keras.layers.Layer):
 
 
 class BaselineAttention(keras.layers.Layer):
-    def __init__(self, h, d, **kwargs):
+    def __init__(self, h, d, max_seq=2048, **kwargs):
         super().__init__(**kwargs)
         self.len_k = None
         self.max_seq = None
@@ -107,10 +107,11 @@ class BaselineAttention(keras.layers.Layer):
         self.Wk = keras.layers.Dense(int(self.d / 2))
         self.Wv = keras.layers.Dense(int(self.d))
         self.fc = keras.layers.Dense(d)
+        self.max_seq = max_seq
 
     def build(self, input_shape):
         self.len_k = input_shape[1][1]
-        self.max_seq = max(input_shape[0][1], input_shape[1][1], input_shape[2][1])
+        # self.max_seq = max(input_shape[0][1], input_shape[1][1], input_shape[2][1])
 
     def call(self, inputs, mask=None, **kwargs):
         """
@@ -142,11 +143,11 @@ class BaselineAttention(keras.layers.Layer):
         if mask is not None:
             logits += (tf.cast(mask, tf.float32) * -1e9)
 
-        attention = tf.nn.softmax(logits, -1)
-        attention = tf.matmul(attention, v)
+        attention_weights = tf.nn.softmax(logits, -1)
+        attention = tf.matmul(attention_weights, v)
 
         out = tf.transpose(attention, (0, 2, 1, 3))
-        out = tf.reshape(out, (-1, self.max_seq, self.d))
+        out = tf.reshape(out, (out.shape[0], -1, self.d))
 
         out = self.fc(out)
         return out
@@ -206,6 +207,7 @@ class RelativeGlobalAttention(keras.layers.Layer):
 
         E = self._get_left_embedding(self.len_q, self.len_k)
         QE = tf.einsum('bhld,md->bhlm', q, E)
+        QE = self._qe_masking(QE)
         # print(QE.shape)
         Srel = self._skewing(QE)
 
@@ -217,10 +219,10 @@ class RelativeGlobalAttention(keras.layers.Layer):
         if mask is not None:
             logits += (tf.cast(mask, tf.float32) * -1e9)
 
-        attention = tf.nn.softmax(logits, -1)
+        attention_weights = tf.nn.softmax(logits, -1)
         # tf.print('logit result: \n', logits, output_stream=sys.stdout)
 
-        attention = tf.matmul(attention, v)
+        attention = tf.matmul(attention_weights, v)
         # tf.print('attention result: \n', attention, output_stream=sys.stdout)
 
         out = tf.transpose(attention, (0, 2, 1, 3))
@@ -234,6 +236,16 @@ class RelativeGlobalAttention(keras.layers.Layer):
         e = self.E[starting_point:,:]
         return e
 
+    @staticmethod
+    def _qe_masking(qe):
+        mask = tf.sequence_mask(
+            tf.range(qe.shape[-1] -1, qe.shape[-1] - qe.shape[-2] -1, -1), qe.shape[-1])
+
+        mask = tf.logical_not(mask)
+        mask = tf.cast(mask, tf.float32)
+
+        return mask * qe
+
     def _skewing(self, tensor: tf.Tensor):
         padded = tf.pad(tensor, [[0, 0], [0,0], [0, 0], [1, 0]])
         reshaped = tf.reshape(padded, shape=[-1, padded.shape[1], padded.shape[-1], padded.shape[-2]])
@@ -244,7 +256,6 @@ class RelativeGlobalAttention(keras.layers.Layer):
             Srel = tf.pad(Srel, [[0,0], [0,0], [0,0], [0, self.len_k-self.len_q]])
         elif self.len_k < self.len_q:
             Srel = Srel[:,:,:,:self.len_k]
-        # print(Srel.shape)
 
         return Srel
 
@@ -265,7 +276,7 @@ class EncoderLayer(keras.layers.Layer):
         self.d_model = d_model
         self.rga = RelativeGlobalAttention(h=h, d=d_model, add_emb=additional, max_seq=max_seq)
 
-        self.FFN_pre = keras.layers.Dense(512, activation=tf.nn.relu)
+        self.FFN_pre = keras.layers.Dense(self.d_model // 2, activation=tf.nn.relu)
         self.FFN_suf = keras.layers.Dense(self.d_model)
 
         self.layernorm1 = keras.layers.LayerNormalization(epsilon=1e-6)
@@ -291,10 +302,10 @@ class DecoderLayer(keras.layers.Layer):
         super(DecoderLayer, self).__init__()
 
         self.d_model = d_model
-        self.rga = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
         self.rga2 = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
+        self.rga = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
 
-        self.FFN_pre = keras.layers.Dense(512, activation=tf.nn.relu)
+        self.FFN_pre = keras.layers.Dense(self.d_model // 2, activation=tf.nn.relu)
         self.FFN_suf = keras.layers.Dense(self.d_model)
 
         self.layernorm1 = keras.layers.LayerNormalization(epsilon=1e-6)
@@ -344,7 +355,7 @@ class Encoder(keras.layers.Layer):
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
-        x = self.dropout(x, training=training)
+        # x = self.dropout(x, training=training)
         for i in range(self.num_layers):
             x = self.enc_layers[i](x, mask, training=training)
         return x  # (batch_size, input_seq_len, d_model)
@@ -370,7 +381,7 @@ class Decoder(keras.layers.Layer):
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
-        x = self.dropout(x, training=training)
+        # x = self.dropout(x, training=training)
         for i in range(self.num_layers):
             x = self.dec_layers[i](x, enc_output, lookup_mask=lookup_mask, mask=mask, training=training)
         return x  # (batch_size, input_seq_len, d_model)
@@ -390,7 +401,7 @@ if __name__ == '__main__':
     import utils
 
     src_mask, trg_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(q.shape[1], tf.argmax(k,-1), tf.argmax(q, -1))
-    print(src_mask.shape, trg_mask.shape, look_ahead_mask.shape)
+    # print(src_mask.shape, trg_mask.shape, look_ahead_mask.shape)
 
     result = rga([
         tf.constant([

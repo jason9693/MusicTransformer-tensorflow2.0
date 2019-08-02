@@ -5,7 +5,6 @@ import sys
 import hashlib
 from progress.bar import Bar
 import tensorflow as tf
-from sequence import NoteSeq, EventSeq, ControlSeq
 import utils
 import params as par
 from midi_processor.processor import encode_midi, decode_midi
