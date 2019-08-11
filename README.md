@@ -35,11 +35,31 @@
 
 
 
+## Midi Download	
+
+```bash
+$ sh dataset/script/{ecomp_piano_downloader, midi_world_downloader, ...}.sh
+```
+
+* These shell files are from [performaceRNN re-built repository](https://github.com/djosix/Performance-RNN-PyTorch) implemented by [djosix](https://github.com/djosix)
+
+
+
+## Prepare Dataset	
+
+```bash
+$ python preprocess.py {midi_load_dir} {dataset_save_dir}
+```
+
+
+
 ## Trainig
 
 * ~~Train with Encoder & Decoder architecture ( original transformer architecture )~~
 
   -> original transformer model is **not compatible** with **music generation** task. ( attention map is entangled ) 
+
+  -> If you wanna see this model, see `MusicTransformer`  class in `model.py`
 
 * Train with only Decoder wise ( only self-attention AR. )
 
