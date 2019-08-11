@@ -99,7 +99,7 @@ $ python preprocess.py {midi_load_dir} {dataset_save_dir}
 * mt.generate() can generate music automatically.
 
   ```python
-  from models import MusicTransformer
+  from model import MusicTransformerDecoder
   mt = MusicTransformerDecoder(
     	embedding_dim=256, vocab_size=par.vocab_size, 
     	num_layer=6, 
