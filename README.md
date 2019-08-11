@@ -123,7 +123,7 @@ $ python preprocess.py {midi_load_dir} {dataset_save_dir}
 
 * click the image.
 
-[![sample_meta](readme_src/sample_meta.jpeg)](https://www.youtube.com/watch?v=n6pi7QJ6nvk&list=PLVopZAnUrGWrbIkLGB3bz5nitWThIueS2)
+[![sample_meta](readme_src/sample_meta.jpeg){ width=30% }](https://www.youtube.com/watch?v=n6pi7QJ6nvk&list=PLVopZAnUrGWrbIkLGB3bz5nitWThIueS2)
 
 
 
