@@ -105,49 +105,16 @@ class PositionalY:
         return '<Label located in {} position.>'.format(self.idx)
 
 
-# class DataSequence(keras.utils.Sequence):
-#     def __init__(self, path, batch_size, seq_len, vocab_size=sequence.EventSeq.dim()+2):
-#         self.data = Data(path)
-#         self.batch_size = batch_size
-#         self.file_idx = 0
-#         self.cache = []
-#         self.vocab_size = vocab_size
-#         self.seq_len = seq_len
-#         pass
-#
-#     def _update_cache(self):
-#         if self.file_idx < len(self.data.files)-1:
-#             self.file_idx += 1
-#         else:
-#             self.file_idx = 0
-#         seq = self.data._get_seq(self.data.files[self.file_idx])
-#         self.cache = self._cut_data(seq)
-#
-#     def __len__(self):
-#         return len(self.data.files)
-#
-#     def __getitem__(self, idx):
-#         data_batch = self.data.batch(self.batch_size,self.seq_len + 1)
-#         data_batch = np.array(data_batch)
-#         try:
-#             x = data_batch[:,:-1]
-#             y = data_batch[:,1:]
-#         except:
-#             print('except')
-#             return self.__getitem__(idx)
-#
-#         return np.array(x), np.eye(self.vocab_size)[np.array(y)]
-#
-#
-# def add_noise(inputs: np.array, rate:float = 0.01): # input's dim is 2
-#     seq_length = np.shape(inputs)[-1]
-#
-#     num_mask = int(rate * seq_length)
-#     for inp in inputs:
-#         rand_idx = random.sample(range(seq_length), num_mask)
-#         inp[rand_idx] = par.pad_token
-#
-#     return inputs
+def add_noise(inputs: np.array, rate:float = 0.01): # input's dim is 2
+    seq_length = np.shape(inputs)[-1]
+
+    num_mask = int(rate * seq_length)
+    for inp in inputs:
+        rand_idx = random.sample(range(seq_length), num_mask)
+        inp[rand_idx] = random.randrange(0, par.pad_token)
+
+    return inputs
+
 
 if __name__ == '__main__':
     import pprint

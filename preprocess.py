@@ -8,12 +8,13 @@ import tensorflow as tf
 import utils
 import params as par
 from midi_processor.processor import encode_midi, decode_midi
+from midi_processor import processor
 import config
 import random
 
 
 def preprocess_midi(path):
-    return encode_midi(path)
+    return encode_midi(path, augumentation=False)
 #     note_seq = NoteSeq.from_midi_file(path)
 #     note_seq.adjust_time(-note_seq.notes[0].start)
 #     event_seq = EventSeq.from_note_seq(note_seq)
@@ -39,6 +40,17 @@ def preprocess_midi_files_under(midi_root, save_dir):
 
         with open('{}/{}.pickle'.format(save_dir,path.split('/')[-1]), 'wb') as f:
             pickle.dump(data, f)
+
+
+# def _augumentation(seq):
+#     range_note = range(0, processor.RANGE_NOTE_ON+processor.RANGE_NOTE_OFF)
+#     range_time = range(
+#         processor.START_IDX['time_shift'],
+#         processor.START_IDX['time_shift']+processor.RANGE_TIME_SHIFT
+#     )
+#     for idx, data in enumerate(seq):
+#         if data in range_note:
+#
 
 
 class TFRecordsConverter(object):

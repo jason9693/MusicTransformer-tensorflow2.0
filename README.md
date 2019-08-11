@@ -1,19 +1,24 @@
 # Music Transformer: Generating Music with Long-Term Structure
 
 - 2019 ICLR, Cheng-Zhi Anna Huang, Google Brain
-- Re-producer : Jason Yang ( Yang-Kichang )
+- Re-producer : Yang-Kichang
 - [paper link](https://arxiv.org/abs/1809.04281) 
 - [paper review](https://github.com/SSUHan/PaparReviews/issues/13)
+
+
 
 ## Abstract
 
 1. This Repository is perfectly cometible with **tensorflow 2.0**
 
+
+
 ## Contribution
 
 * Domain: Dramatically reduces the memory footprint, allowing it to scale to musical sequences on the order of minutes.
-
 * Algorithm: Reduced space complexity of Transformer from O(N^2D) to O(ND).
+
+
 
 ## Preprocessing
 
@@ -32,6 +37,18 @@
 
 ## Trainig
 
+* ~~Train with Encoder & Decoder architecture ( original transformer architecture )~~
+
+  -> original transformer model is **not compatible** with **music generation** task. ( attention map is entangled ) 
+
+* Train with only Decoder wise ( only self-attention AR. )
+
+```bash
+$ python train.py --epochs={NUM_EPOCHS} --load_path={NONE_OR_LOADING_DIR} --save_path={SAVING_DIR} --max_seq={SEQ_LENGTH} --pickle_dir={DATA_PATH} --batch_size={BATCH_SIZE} --l_r={LEARNING_RATE}
+```
+
+
+
 ## Hyper Parameter
 
 * learning rate : 0.0001
@@ -39,25 +56,47 @@
 * number of layers : 6
 * seqence length : 2048
 * embedding dim : 256 (dh = 256 / 4 = 64)
-* batch size : 3
+* batch size : 2
+
+
+
+## Result
+
+-  Baseline Transformer ( Green, Gray Color ) vs Music Transformer ( Blue, Red Color )
+
+* Loss
+
+  ![loss](readme_src/loss.svg)
+
+* Accuracy
+
+  ![accuracy](readme_src/accuracy.svg)
+
+
 
 ## Generate Music
 
 * mt.generate() can generate music automatically.
 
-```python
-from models import MusicTransformer
-mt = MusicTransformer(
-  	embedding_dim=256, vocab_size=par.vocab_size, 
-  	num_layer=6, 
-  	max_seq=max_seq,
-  	dropout=0.1,
-  	debug=False
-)
-mt.generate(prior=[1,3,4,5], length=2048)
-```
+  ```python
+  from models import MusicTransformer
+  mt = MusicTransformerDecoder(
+    	embedding_dim=256, vocab_size=par.vocab_size, 
+    	num_layer=6, 
+    	max_seq=max_seq,
+    	dropout=0.1,
+    	debug=False
+  )
+  mt.generate(prior=[64], length=2048)
+  ```
 
+* If you want to generate with shell wise, see this.
 
+  ```bash
+  $ python generate.py --load_path={CKPT_CONFIG_PATH} --length={GENERATE_SEQ_LENGTH} --beam={NONE_OR_BEAM_SIZE}
+  ```
+
+  
 
 ## TF2.0 Trouble Shooting
 
@@ -72,8 +111,6 @@ mt.generate(prior=[1,3,4,5], length=2048)
   dropout = keras.layers.Dropout(0.3)
   ```
 
-
-
 ### 2. tf.keras.optimizers.Adam() 
 
 tf-2.0alpha currently not supported **keras.optimizers** as **version 2.** so, you can't use **optimizer.apply_gradients()**. So, you should import `from tensorflow.python.keras.optimizer_v2.adam import Adam` first.
@@ -85,9 +122,11 @@ tf-2.0alpha currently not supported **keras.optimizers** as **version 2.** so, y
   optimizer = Adam(0.0001)
   ```
 
-
-
 ### 3. Keras Model Subclassing
 
 current tf 2.0(alpha) , subclassed keras model can't use method **save(), summary(), fit()** and **save_weigths() with .h5 format**
+
+### 4. Distribute Training
+
+As dist train (with 4GPU) is slower than using single GPU, I trained this model with single GPU. Nonethless, you want to see how to distribute training, See `dist_train.py`
 

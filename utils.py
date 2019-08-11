@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from sequence import EventSeq, ControlSeq
+from deprecated.sequence import EventSeq, ControlSeq
 import tensorflow as tf
 import params as par
 
@@ -145,6 +145,67 @@ def append_token(data: tf.Tensor):
 
     return tf.concat([start_token, data, end_token], -1)
 
+
+def weights2boards(weights, dir, step): # weights stored weight[layer][w1,w2]
+    for weight in weights:
+        w1, w2 = weight
+        tf.summary.histogram()
+    pass
+
+
+def shape_list(x):
+  """Shape list"""
+  x_shape = tf.shape(x)
+  x_get_shape = x.get_shape().as_list()
+
+  res = []
+  for i, d in enumerate(x_get_shape):
+    if d is not None:
+      res.append(d)
+    else:
+      res.append(x_shape[i])
+  return res
+
+
+def attention_image_summary(attn, step=0):
+  """Compute color image summary.
+  Args:
+    attn: a Tensor with shape [batch, num_heads, query_length, memory_length]
+    image_shapes: optional tuple of integer scalars.
+      If the query positions and memory positions represent the
+      pixels of flattened images, then pass in their dimensions:
+        (query_rows, query_cols, memory_rows, memory_cols).
+      If the query positions and memory positions represent the
+      pixels x channels of flattened images, then pass in their dimensions:
+        (query_rows, query_cols, query_channels,
+         memory_rows, memory_cols, memory_channels).
+  """
+  num_heads = shape_list(attn)[1]
+  # [batch, query_length, memory_length, num_heads]
+  image = tf.transpose(attn, [0, 2, 3, 1])
+  image = tf.math.pow(image, 0.2)  # for high-dynamic-range
+  # Each head will correspond to one of RGB.
+  # pad the heads to be a multiple of 3
+  image = tf.pad(image, [[0, 0], [0, 0], [0, 0], [0, tf.math.mod(-num_heads, 3)]])
+  image = split_last_dimension(image, 3)
+  image = tf.reduce_max(image, 4)
+  tf.summary.image("attention", image, max_outputs=1, step=step)
+
+
+def split_last_dimension(x, n):
+  """Reshape x so that the last dimension becomes two dimensions.
+  The first of these two dimensions is n.
+  Args:
+    x: a Tensor with shape [..., m]
+    n: an integer.
+  Returns:
+    a Tensor with shape [..., n, m/n]
+  """
+  x_shape = shape_list(x)
+  m = x_shape[-1]
+  if isinstance(m, int) and isinstance(n, int):
+    assert m % n == 0
+  return tf.reshape(x, x_shape[:-1] + [n, m // n])
 
 if __name__ == '__main__':
 

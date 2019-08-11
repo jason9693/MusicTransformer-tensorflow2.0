@@ -1,4 +1,4 @@
-from sequence import EventSeq, NoteSeq
+from deprecated.sequence import EventSeq
 import numpy as np
 
 rand_array = np.random.random_sample([2048])

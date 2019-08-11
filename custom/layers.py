@@ -113,10 +113,11 @@ class BaselineAttention(keras.layers.Layer):
         self.len_k = input_shape[1][1]
         # self.max_seq = max(input_shape[0][1], input_shape[1][1], input_shape[2][1])
 
-    def call(self, inputs, mask=None, **kwargs):
+    def call(self, inputs, mask=None, weight_out=False, **kwargs):
         """
         :param inputs: a list of tensors. i.e) [Q, K, V]
         :param mask: mask tensor
+        :param weight_out: decide to get weather weight or not
         :param kwargs:
         :return: final tensor ( output of attention )
         """
@@ -150,7 +151,8 @@ class BaselineAttention(keras.layers.Layer):
         out = tf.reshape(out, (out.shape[0], -1, self.d))
 
         out = self.fc(out)
-        return out
+
+        return out, attention_weights
 
 
 class RelativeGlobalAttention(keras.layers.Layer):
@@ -166,8 +168,8 @@ class RelativeGlobalAttention(keras.layers.Layer):
         self.h = h
         self.d = d
         self.dh = d // h
-        self.Wq = keras.layers.Dense(int(self.d // 2))
-        self.Wk = keras.layers.Dense(int(self.d // 2))
+        self.Wq = keras.layers.Dense(int(self.d))
+        self.Wk = keras.layers.Dense(int(self.d))
         self.Wv = keras.layers.Dense(int(self.d))
         self.fc = keras.layers.Dense(d)
         self.additional = add_emb
@@ -178,7 +180,7 @@ class RelativeGlobalAttention(keras.layers.Layer):
         self.shape_q = input_shape[0][1]
         self.shape_k = input_shape[1][1]
         # self.max_seq = max(input_shape[0][1], input_shape[1][1], input_shape[2][1])
-        self.E = self.add_weight('emb', shape=[self.max_seq, int(self.dh // 2)])
+        self.E = self.add_weight('emb', shape=[self.max_seq, int(self.dh)])
 
     def call(self, inputs, mask=None, **kwargs):
         """
@@ -229,7 +231,7 @@ class RelativeGlobalAttention(keras.layers.Layer):
         out = tf.reshape(out, (out.shape[0], -1, self.d))
 
         out = self.fc(out)
-        return out
+        return out, attention_weights
 
     def _get_left_embedding(self, len_q, len_k):
         starting_point = max(0,self.max_seq-len_q)
@@ -274,7 +276,7 @@ class EncoderLayer(keras.layers.Layer):
         super(EncoderLayer, self).__init__()
 
         self.d_model = d_model
-        self.rga = RelativeGlobalAttention(h=h, d=d_model, add_emb=additional, max_seq=max_seq)
+        self.rga = RelativeGlobalAttention(h=h, d=d_model, max_seq=max_seq, add_emb=additional)
 
         self.FFN_pre = keras.layers.Dense(self.d_model // 2, activation=tf.nn.relu)
         self.FFN_suf = keras.layers.Dense(self.d_model)
@@ -286,7 +288,7 @@ class EncoderLayer(keras.layers.Layer):
         self.dropout2 = keras.layers.Dropout(rate)
 
     def call(self, x, mask=None, training=False, **kwargs):
-        attn_out = self.rga([x,x,x], mask)
+        attn_out, w = self.rga([x,x,x], mask)
         attn_out = self.dropout1(attn_out, training=training)
         out1 = self.layernorm1(attn_out+x)
 
@@ -294,7 +296,7 @@ class EncoderLayer(keras.layers.Layer):
         ffn_out = self.FFN_suf(ffn_out)
         ffn_out = self.dropout2(ffn_out, training=training)
         out2 = self.layernorm2(out1+ffn_out)
-        return out2
+        return out2, w
 
 
 class DecoderLayer(keras.layers.Layer):
@@ -302,8 +304,8 @@ class DecoderLayer(keras.layers.Layer):
         super(DecoderLayer, self).__init__()
 
         self.d_model = d_model
-        self.rga2 = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
-        self.rga = RelativeGlobalAttention(d=d_model, h=h, add_emb=additional, max_seq=max_seq)
+        self.rga2 = RelativeGlobalAttention(d=d_model, h=h, max_seq=max_seq, add_emb=additional)
+        self.rga = RelativeGlobalAttention(d=d_model, h=h, max_seq=max_seq, add_emb=additional)
 
         self.FFN_pre = keras.layers.Dense(self.d_model // 2, activation=tf.nn.relu)
         self.FFN_suf = keras.layers.Dense(self.d_model)
@@ -316,13 +318,16 @@ class DecoderLayer(keras.layers.Layer):
         self.dropout2 = keras.layers.Dropout(rate)
         self.dropout3 = keras.layers.Dropout(rate)
 
-    def call(self, x, encode_out, mask=None, lookup_mask=None, training=False, **kwargs):
+    def call(self, x, encode_out, mask=None, lookup_mask=None, training=False, w_out=False, **kwargs):
 
-        attn_out = self.rga([x, x, x], mask=lookup_mask)
+        attn_out, aw1 = self.rga([x, x, x], mask=lookup_mask)
         attn_out = self.dropout1(attn_out, training=training)
         out1 = self.layernorm1(attn_out+x)
 
-        attn_out2 = self.rga2([out1, encode_out, encode_out], mask=mask)
+        if encode_out is None:
+            attn_out2, aw2 = self.rga2([out1, out1, out1], mask=mask)
+        else:
+            attn_out2, aw2 = self.rga2([out1, encode_out, encode_out], mask=mask)
         attn_out2 = self.dropout2(attn_out2, training=training)
         attn_out2 = self.layernorm2(out1+attn_out2)
 
@@ -330,7 +335,11 @@ class DecoderLayer(keras.layers.Layer):
         ffn_out = self.FFN_suf(ffn_out)
         ffn_out = self.dropout3(ffn_out, training=training)
         out = self.layernorm3(attn_out2+ffn_out)
-        return out
+
+        if w_out:
+            return out, aw1, aw2
+        else:
+            return out
 
 
 class Encoder(keras.layers.Layer):
@@ -351,14 +360,16 @@ class Encoder(keras.layers.Layer):
         self.dropout = keras.layers.Dropout(rate)
 
     def call(self, x, mask=None, training=False):
+        weights = []
         # adding embedding and position encoding.
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
-        # x = self.dropout(x, training=training)
+        x = self.dropout(x, training=training)
         for i in range(self.num_layers):
-            x = self.enc_layers[i](x, mask, training=training)
-        return x  # (batch_size, input_seq_len, d_model)
+            x, w = self.enc_layers[i](x, mask, training=training)
+            weights.append(w)
+        return x, weights  # (batch_size, input_seq_len, d_model)
 
 
 class Decoder(keras.layers.Layer):
@@ -376,15 +387,19 @@ class Decoder(keras.layers.Layer):
                            for i in range(num_layers)]
         self.dropout = keras.layers.Dropout(rate)
 
-    def call(self, x, enc_output, mask, lookup_mask, training):
+    def call(self, x, mask, lookup_mask, training, enc_output=None):
+        weights = []
         # adding embedding and position encoding.
         x = self.embedding(x)  # (batch_size, input_seq_len, d_model)
         x *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
         x = self.pos_encoding(x)
-        # x = self.dropout(x, training=training)
+        x = self.dropout(x, training=training)
         for i in range(self.num_layers):
-            x = self.dec_layers[i](x, enc_output, lookup_mask=lookup_mask, mask=mask, training=training)
-        return x  # (batch_size, input_seq_len, d_model)
+            x, w1, w2 = \
+                self.dec_layers[i](x, enc_output, lookup_mask=lookup_mask, mask=mask, training=training, w_out=True)
+            weights.append((w1, w2))
+
+        return x, weights  # (batch_size, input_seq_len, d_model)
 
 
 if __name__ == '__main__':
@@ -470,7 +485,7 @@ if __name__ == '__main__':
 
     src_mask, trg_mask, look_ahead_mask = utils.get_masked_with_pad_tensor(q.shape[1], tf.argmax(k, -1),
                                                                            tf.argmax(q, -1))
-    print(src_mask.shape, trg_mask.shape, look_ahead_mask.shape)
+    print(src_mask, trg_mask, look_ahead_mask)
     result = rga([
         q,
         k,
