@@ -116,7 +116,16 @@ $ python preprocess.py {midi_load_dir} {dataset_save_dir}
   $ python generate.py --load_path={CKPT_CONFIG_PATH} --length={GENERATE_SEQ_LENGTH} --beam={NONE_OR_BEAM_SIZE}
   ```
 
-  
+
+
+
+## Generated Samples
+
+* click the image.
+
+[![sample_meta](readme_src/sample_meta.jpeg)](https://www.youtube.com/watch?v=n6pi7QJ6nvk&list=PLVopZAnUrGWrbIkLGB3bz5nitWThIueS2)
+
+
 
 ## TF2.0 Trouble Shooting
 
