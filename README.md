@@ -119,11 +119,11 @@ $ python preprocess.py {midi_load_dir} {dataset_save_dir}
 
 
 
-## Generated Samples
+## Generated Samples ( Youtube Link )
 
 * click the image.
 
-[![sample_meta](readme_src/sample_meta.jpeg){ width=30% }](https://www.youtube.com/watch?v=n6pi7QJ6nvk&list=PLVopZAnUrGWrbIkLGB3bz5nitWThIueS2)
+  [<img src="readme_src/sample_meta.jpeg" width="400"/>](https://www.youtube.com/watch?v=n6pi7QJ6nvk&list=PLVopZAnUrGWrbIkLGB3bz5nitWThIueS2)
 
 
 
