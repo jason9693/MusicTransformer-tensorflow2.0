@@ -22,6 +22,7 @@ parser.add_argument('--load_path', default=None, help='모델 로드 경로', ty
 parser.add_argument('--save_path', default="result/dec0722", help='모델 저장 경로')
 parser.add_argument('--is_reuse', default=False)
 parser.add_argument('--multi_gpu', default=True)
+parser.add_argument('--num_layers', default=6, type=int)
 
 args = parser.parse_args()
 
@@ -36,6 +37,7 @@ is_reuse = args.is_reuse
 load_path = args.load_path
 save_path = args.save_path
 multi_gpu = args.multi_gpu
+num_layer = args.num_layers
 
 
 # load data
@@ -52,7 +54,7 @@ opt = Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
 mt = MusicTransformerDecoder(
             embedding_dim=256,
             vocab_size=par.vocab_size,
-            num_layer=6,
+            num_layer=num_layer,
             max_seq=max_seq,
             dropout=0.2,
             debug=False, loader_path=load_path)

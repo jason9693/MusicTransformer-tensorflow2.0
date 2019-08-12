@@ -6,6 +6,7 @@ from tensorflow.python import keras
 import json
 import tensorflow_probability as tfp
 import random
+import utils
 tf.executing_eagerly()
 
 
@@ -506,7 +507,7 @@ class MusicTransformerDecoder(keras.Model):
 
 
 if __name__ == '__main__':
-    import utils
+    # import utils
     print(tf.executing_eagerly())
 
     src = tf.constant([utils.fill_with_placeholder([1,2,3,4],max_len=2048)])
