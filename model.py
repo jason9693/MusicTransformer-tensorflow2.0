@@ -7,6 +7,7 @@ import json
 import tensorflow_probability as tfp
 import random
 import utils
+from progress.bar import Bar
 tf.executing_eagerly()
 
 
@@ -206,9 +207,9 @@ class MusicTransformer(keras.Model):
             decode_array = decode_array[0]
         else:
             decode_array = tf.constant([decode_array])
-            for i in range(min(self.max_seq, length)):
-                if i % 100 == 0:
-                    print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
+            for i in Bar('generating').iter(range(min(self.max_seq, length))):
+                # if i % 100 == 0:
+                #     print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
                 enc_mask, tar_mask, look_ahead_mask = \
                     utils.get_masked_with_pad_tensor(decode_array.shape[1], prior, decode_array)
 
@@ -443,12 +444,12 @@ class MusicTransformerDecoder(keras.Model):
             decode_array = decode_array[0]
 
         else:
-            for i in range(min(self.max_seq, length)):
+            for i in Bar('generating').iter(range(min(self.max_seq, length))):
                 # print(decode_array.shape[1])
                 if decode_array.shape[1] >= self.max_seq:
                     break
-                if i % 100 == 0:
-                    print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
+                # if i % 100 == 0:
+                #     print('generating... {}% completed'.format((i/min(self.max_seq, length))*100))
                 _, _, look_ahead_mask = \
                     utils.get_masked_with_pad_tensor(decode_array.shape[1], decode_array, decode_array)
 

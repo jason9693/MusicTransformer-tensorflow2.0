@@ -17,6 +17,7 @@ parser.add_argument('--load_path', default="result/dec0722", help='모델 로드
 parser.add_argument('--mode', default='dec')
 parser.add_argument('--beam', default=None, type=int)
 parser.add_argument('--length', default=2048, type=int)
+parser.add_argument('--save_path', default='bin/generated.mid', type=str)
 
 
 args = parser.parse_args()
@@ -28,6 +29,7 @@ load_path = args.load_path
 mode = args.mode
 beam = args.beam
 length = args.length
+save_path= args.save_path
 
 
 current_time = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -52,12 +54,12 @@ inputs = encode_midi('dataset/midi/BENABD10.mid')
 
 
 with gen_summary_writer.as_default():
-    result = mt.generate(inputs[:500], beam=beam, length=length, tf_board=True)
+    result = mt.generate(inputs[:10], beam=beam, length=length, tf_board=True)
 
 for i in result:
     print(i)
 
 if mode == 'enc-dec':
-    decode_midi(list(inputs[-1*par.max_seq:]) + list(result[1:]), file_path='bin/generated.mid')
+    decode_midi(list(inputs[-1*par.max_seq:]) + list(result[1:]), file_path=save_path)
 else:
-    decode_midi(result, file_path='bin/generated.mid')
+    decode_midi(result, file_path=save_path)
