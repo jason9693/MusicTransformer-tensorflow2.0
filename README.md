@@ -9,7 +9,7 @@
 
 ## Abstract
 
-1. This Repository is perfectly cometible with **tensorflow 2.0**
+1. This Repository is perfectly compatible with **tensorflow 2.0**
 
 
 
@@ -71,7 +71,7 @@ $ python preprocess.py {midi_load_dir} {dataset_save_dir}
 
 ## Hyper Parameter
 
-* learning rate : 0.0001
+* learning rate : Scheduled learning rate ( see: [CustomSchedule](custom/callback.py) )
 * head size : 4
 * number of layers : 6
 * seqence length : 2048
