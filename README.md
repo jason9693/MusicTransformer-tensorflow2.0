@@ -34,6 +34,14 @@
   ![](https://user-images.githubusercontent.com/11185336/51083282-cddfc300-175a-11e9-9341-4a9042b17c19.png)
 
 
+## Repository Setting
+```bash
+$ git clone https://github.com/jason9693/MusicTransformer-tensorflow2.0.git
+$ cd MusicTransformer-tensorflow2.0
+$ git clone https://github.com/jason9693/midi-neural-processor.git
+$ mv midi-neural-processor midi_processor
+```
+
 
 ## Midi Download	
 
