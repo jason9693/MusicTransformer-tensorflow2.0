@@ -10,14 +10,13 @@
 ## Abstract
 
 1. This Repository is perfectly compatible with **tensorflow 2.0**
-
+2. If you want pytorch version, see [here](https://github.com/jason9693/MusicTransformer-pytorch)
 
 
 ## Contribution
 
 * Domain: Dramatically reduces the memory footprint, allowing it to scale to musical sequences on the order of minutes.
 * Algorithm: Reduced space complexity of Transformer from O(N^2D) to O(ND).
-
 
 
 ## Preprocessing
