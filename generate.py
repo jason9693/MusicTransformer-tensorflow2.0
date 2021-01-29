@@ -43,7 +43,7 @@ if mode == 'enc-dec':
             embedding_dim=256,
             vocab_size=par.vocab_size,
             num_layer=6,
-            max_seq=2048,
+            max_seq=max_seq,
             dropout=0.2,
             debug=False, loader_path=load_path)
 else:

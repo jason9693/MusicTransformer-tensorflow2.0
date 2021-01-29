@@ -41,7 +41,8 @@ num_layer = args.num_layers
 
 
 # load data
-dataset = Data('dataset/processed')
+#dataset = Data('dataset/processed')
+dataset = Data(pickle_dir)
 print(dataset)
 
 
