@@ -40,7 +40,7 @@ humanize==0.5.1
 idna==2.6
 inflect==2.1.0
 itsdangerous==1.1.0
-Jinja2==2.10.1
+Jinja2==2.11.3
 jmespath==0.9.4
 jsonpath-ng==1.4.3
 Keras-Applications==1.0.8
