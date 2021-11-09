@@ -39,9 +39,9 @@ class MusicTransformer(keras.Model):
             self.load_ckpt_file(loader_path)
 
     def call(self, inputs, targets, training=None, eval=None, src_mask=None, trg_mask=None, lookup_mask=None):
-        encoder, weight_encoder = self.Encoder(inputs, training=training, mask=src_mask)
+        encoder, weight_encoder = self.Encoder(inputs, training=training, mask=src_mask, max_len=self.max_seq)
         decoder, weights = self.Decoder(
-            targets, enc_output=encoder, training=training, lookup_mask=lookup_mask, mask=trg_mask
+            targets, enc_output=encoder, training=training, lookup_mask=lookup_mask, mask=trg_mask, max_len=self.max_seq
         )
 
         fc = self.fc(decoder)
@@ -275,7 +275,7 @@ class MusicTransformerDecoder(keras.Model):
 
         self.Decoder = Encoder(
             num_layers=self.num_layer, d_model=self.embedding_dim,
-            input_vocab_size=self.vocab_size, rate=dropout, max_len=max_seq)
+            input_vocab_size=self.vocab_size, rate=dropout, max_len=self.max_seq)
         self.fc = keras.layers.Dense(self.vocab_size, activation=None, name='output')
 
         self._set_metrics()
