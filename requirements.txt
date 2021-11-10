@@ -90,7 +90,7 @@ sqlparse==0.3.0
 ssh-import-id==5.7
 tabulate==0.8.3
 tb-nightly==1.14.0a20190603
-tensorflow-gpu==2.0.0b1
+tensorflow-gpu==2.5.2
 termcolor==1.1.0
 tf-estimator-nightly==1.14.0.dev2019060501
 tfp-nightly==0.8.0.dev20190807
