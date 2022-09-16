@@ -47,7 +47,7 @@ Keras-Applications==1.0.8
 Keras-Preprocessing==1.1.0
 keyring==10.6.0
 keyrings.alt==3.0
-Mako==1.0.12
+Mako==1.2.2
 Markdown==3.1.1
 MarkupSafe==1.1.1
 mido==1.2.9
