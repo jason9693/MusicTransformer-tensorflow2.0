@@ -1,6 +1,6 @@
 import tensorflow as tf
 import math as m
-from tensorflow.python import keras
+from tensorflow import keras
 import numpy as np
 import math
 
