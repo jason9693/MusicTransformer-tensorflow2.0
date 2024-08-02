@@ -9,6 +9,10 @@ import params as par
 class Data:
     def __init__(self, dir_path):
         self.files = list(utils.find_files_by_extensions(dir_path, ['.pickle']))
+
+        if len(self.files) == 0:
+            raise ValueError("No pickle files found to analyze.")
+
         self.file_dict = {
             'train': self.files[:int(len(self.files) * 0.8)],
             'eval': self.files[int(len(self.files) * 0.8): int(len(self.files) * 0.9)],
