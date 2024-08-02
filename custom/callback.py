@@ -21,6 +21,7 @@ class TransformerLoss(keras.losses.SparseCategoricalCrossentropy):
         self.debug = debug
         pass
 
+    @tf.function
     def call(self, y_true, y_pred):
         y_true = tf.cast(y_true, tf.int32)
         mask = tf.math.logical_not(tf.math.equal(y_true, par.pad_token))

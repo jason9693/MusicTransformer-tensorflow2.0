@@ -8,6 +8,7 @@ import tensorflow_probability as tfp
 import random
 import utils
 from progress.bar import Bar
+from tensorflow import function
 tf.executing_eagerly()
 
 
@@ -38,6 +39,7 @@ class MusicTransformer(keras.Model):
         if loader_path is not None:
             self.load_ckpt_file(loader_path)
 
+    @function
     def call(self, inputs, targets, training=None, eval=None, src_mask=None, trg_mask=None, lookup_mask=None):
         encoder, weight_encoder = self.Encoder(inputs, training=training, mask=src_mask)
         decoder, weights = self.Decoder(
@@ -81,6 +83,7 @@ class MusicTransformer(keras.Model):
         return [loss.numpy()]+result_metric
 
     # @tf.function
+    @function
     def __dist_train_step(self, inp, inp_tar, out_tar, enc_mask, tar_mask, lookup_mask, training):
         return self._distribution_strategy.experimental_run_v2(
             self.__train_step, args=(inp, inp_tar, out_tar, enc_mask, tar_mask, lookup_mask, training))
@@ -283,6 +286,7 @@ class MusicTransformerDecoder(keras.Model):
         if loader_path is not None:
             self.load_ckpt_file(loader_path)
 
+    @function
     def call(self, inputs, training=None, eval=None, lookup_mask=None):
         decoder, w = self.Decoder(inputs, training=training, mask=lookup_mask)
         fc = self.fc(decoder)
@@ -322,6 +326,7 @@ class MusicTransformerDecoder(keras.Model):
         return [loss.numpy()]+result_metric
 
     # @tf.function
+    @function
     def __dist_train_step(self, inp_tar, out_tar, lookup_mask, training):
         return self._distribution_strategy.experimental_run_v2(
             self.__train_step, args=(inp_tar, out_tar, lookup_mask, training))
